@@ -1,0 +1,88 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Defaults; Theme.Apply() replaces them for dark mode. -->
+    <SolidColorBrush x:Key="MenuBg" Color="#F9F9F9"/>
+    <SolidColorBrush x:Key="MenuBorder" Color="#1A000000"/>
+    <SolidColorBrush x:Key="MenuFg" Color="#1C1C1C"/>
+    <SolidColorBrush x:Key="MenuFgSecondary" Color="#737373"/>
+    <SolidColorBrush x:Key="MenuHover" Color="#0D000000"/>
+    <SolidColorBrush x:Key="MenuSeparator" Color="#14000000"/>
+
+    <!-- A menu in the spirit of Windows 11: rounded, quiet, with room to breathe. -->
+    <Style TargetType="ContextMenu">
+        <Setter Property="OverridesDefaultStyle" Value="True"/>
+        <Setter Property="HasDropShadow" Value="False"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="UseLayoutRounding" Value="True"/>
+        <Setter Property="FontFamily" Value="Segoe UI Variable Text, Segoe UI"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Foreground" Value="{DynamicResource MenuFg}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ContextMenu">
+                    <Grid Margin="12">
+                        <Border CornerRadius="8" Background="{DynamicResource MenuBg}"
+                                BorderBrush="{DynamicResource MenuBorder}" BorderThickness="1" Padding="4">
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="24" ShadowDepth="6" Direction="270" Opacity="0.22" Color="Black"/>
+                            </Border.Effect>
+                            <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle" />
+                        </Border>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="MenuItem">
+        <Setter Property="OverridesDefaultStyle" Value="True"/>
+        <Setter Property="Foreground" Value="{DynamicResource MenuFg}"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="MenuItem">
+                    <Border x:Name="Bd" CornerRadius="5" Margin="0,1" Padding="8,7,12,7" Background="Transparent" MinWidth="200">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="22"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Path x:Name="Check" Data="M1,5.5 L4.5,9 L11,2" Stroke="{DynamicResource MenuFg}" StrokeThickness="1.7"
+                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                  Width="12" Height="11" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="1,0,0,0"
+                                  Visibility="Hidden"/>
+                            <ContentPresenter Grid.Column="1" ContentSource="Header" VerticalAlignment="Center" RecognizesAccessKey="True"/>
+                            <TextBlock Grid.Column="2" Text="{TemplateBinding InputGestureText}" Foreground="{DynamicResource MenuFgSecondary}"
+                                       VerticalAlignment="Center" Margin="28,0,0,0" FontSize="12"/>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsHighlighted" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource MenuHover}"/>
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Check" Property="Visibility" Value="Visible"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.42"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="Separator" x:Key="{x:Static MenuItem.SeparatorStyleKey}">
+        <Setter Property="OverridesDefaultStyle" Value="True"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Separator">
+                    <Rectangle Height="1" Fill="{DynamicResource MenuSeparator}" Margin="6,4"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+</ResourceDictionary>
