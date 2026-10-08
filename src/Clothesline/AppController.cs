@@ -195,7 +195,7 @@ public sealed class AppController : IDisposable
         int index = live.IndexOf(item);
         if (index < 0) return null;
         double width = _panel.Canvas.ActualWidth;
-        double x = Layout.X(index, live.Count, width);
+        double x = card.TargetX > 0 ? card.TargetX : Layout.X(index, live.Count, width);
         double viewTop = Layout.RopeY(x, width) - Layout.PinAbove;
         double cardTop = viewTop + Layout.CardOffsetBelowTop;
         var size = Layout.CardSize(item.PixelWidth, item.PixelHeight);

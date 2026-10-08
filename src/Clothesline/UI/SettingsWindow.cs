@@ -99,6 +99,7 @@ public sealed class SettingsWindow : Window
         stack.Children.Add(Row(Strings.PegStyle, pegs));
 
         stack.Children.Add(Check(Strings.Bows, null, s.Bows, v => s.Bows = v));
+        stack.Children.Add(Check(Strings.AutoArrange, Strings.AutoArrangeTip, s.AutoArrange, v => s.AutoArrange = v));
 
         var appearance = Choice(new[] { ("auto", Strings.Auto), ("light", Strings.Light), ("dark", Strings.Dark) }, s.Appearance, v => s.Appearance = v);
         stack.Children.Add(Row(Strings.Appearance, appearance));

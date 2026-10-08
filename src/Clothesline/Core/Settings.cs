@@ -43,6 +43,10 @@ public sealed class Settings
     /// <summary>wood, metal, mixed, red, blue, green or yellow.</summary>
     public string PegStyle { get; set; } = "wood";
     public bool Bows { get; set; } = true;
+    /// <summary>Spread the photos evenly along the line. Off, each stays where you put it.</summary>
+    public bool AutoArrange { get; set; }
+    /// <summary>Where each photo hangs, as a fraction of the width of the screen, by file path.</summary>
+    public Dictionary<string, double> Spots { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     /// <summary>auto, light or dark.</summary>
     public string Appearance { get; set; } = "auto";
     /// <summary>auto, en or ar.</summary>

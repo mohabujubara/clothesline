@@ -18,6 +18,7 @@ public sealed class LineCanvas : Canvas
     private readonly Path _ropeShadow, _ropeCore, _ropeHighlight;
     private Path? _bowLeft, _bowRight;
     private PeggedControl? _held;
+    private int _topZ = 10;
     private bool _ropeDrag;
     private readonly Border _hint;
     private readonly Tween _hintOpacity = new(0);
@@ -194,10 +195,14 @@ public sealed class LineCanvas : Canvas
         // Falling cards keep their slot until they are removed, so the others do not jump early.
         var live = _cards.Where(c => !c.Item.Falling).ToList();
         int count = live.Count;
+        bool even = Settings.Current.AutoArrange;
         for (int i = 0; i < count; i++)
         {
             var card = live[i];
-            double x = Layout.X(i, count, _width);
+            card.RopeYAt ??= x => Layout.RopeY(x, _width);
+            // Spread evenly, or where you put it. A new photo takes the nearest free place to the middle.
+            double x = even ? Layout.X(i, count, _width) : (card.Item.Spot ?? AssignSpot(card, live)) * _width;
+            x = Math.Clamp(x, Layout.CardWidth / 2, Math.Max(Layout.CardWidth / 2, _width - Layout.CardWidth / 2));
             double ropeY = Layout.RopeY(x, _width);
             bool fresh = double.IsNaN(GetTop(card));
             SetTop(card, ropeY - Layout.PinAbove);
@@ -208,6 +213,26 @@ public sealed class LineCanvas : Canvas
         _hint.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
         SetLeft(_hint, mid - _hint.DesiredSize.Width / 2);
         SetTop(_hint, Layout.RopeY(mid, _width) + 34 - _hint.DesiredSize.Height / 2);
+    }
+
+    /// <summary>The nearest place to the middle of the line with room for a card, remembered on the photo.</summary>
+    private double AssignSpot(PeggedControl card, List<PeggedControl> live)
+    {
+        var taken = live.Where(c => c != card && c.Item.Spot is not null).Select(c => c.Item.Spot!.Value * _width).ToList();
+        double half = Layout.CardWidth / 2;
+        double best = _width / 2;
+        for (int step = 0; step < 40; step++)
+        {
+            foreach (double candidate in new[] { _width / 2 + step * Layout.Spacing, _width / 2 - step * Layout.Spacing })
+            {
+                if (candidate < half || candidate > _width - half) continue;
+                if (taken.All(t => Math.Abs(t - candidate) >= Layout.Spacing * 0.9)) { best = candidate; goto found; }
+            }
+        }
+        found:
+        double fraction = Math.Clamp(best / _width, 0, 1);
+        _line.SetSpot(card.Item.Id, fraction, save: true);
+        return fraction;
     }
 
     private void DrawRope()
@@ -252,7 +277,15 @@ public sealed class LineCanvas : Canvas
     {
         if (_held != card) return;
         double half = Layout.CardWidth / 2;
-        card.SetTargetX(Math.Clamp(centerX, half, Math.Max(half, _width - half)), snap: true);
+        centerX = Math.Clamp(centerX, half, Math.Max(half, _width - half));
+        card.SetTargetX(centerX, snap: true);
+        if (!Settings.Current.AutoArrange)
+        {
+            // It stays where you put it; nothing else moves.
+            _line.SetSpot(card.Item.Id, centerX / _width, save: false);
+            StartTicking();
+            return;
+        }
         var live = _cards.Where(c => !c.Item.Falling).ToList();
         int from = live.IndexOf(card);
         if (from < 0) return;
@@ -272,7 +305,9 @@ public sealed class LineCanvas : Canvas
     {
         if (_held != card) return;
         _held = null;
-        SetZIndex(card, 2);
+        // The last one moved lies on top of any it was dropped against.
+        SetZIndex(card, Settings.Current.AutoArrange ? 2 : ++_topZ);
+        if (!Settings.Current.AutoArrange) _line.SetSpot(card.Item.Id, card.TargetX / _width, save: true);
         Relayout(snap: false);
         StartTicking();
     }

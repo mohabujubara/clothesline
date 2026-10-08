@@ -36,7 +36,7 @@ they land, sway in an occasional breeze, and fall off the screen when you let th
 | Click | Copy the image. Paste it anywhere, as a picture or as a file. |
 | Press and hold | Open it in your image editor (Paint, unless you changed it). The line shows the edited version when you save. |
 | Double click | Open it in Photos. |
-| Drag along the line | Reorder the photos. |
+| Drag along the line | Put the photo where you want it. It stays there. With *Arrange photos evenly* on, the others make room instead. |
 | Drag the line itself | Move the whole line up or down the screen, below your tabs if you like. |
 | Drag into an app | Send a copy. It stays on the line. |
 | Drag into a folder | Keep it there. It leaves the line. |

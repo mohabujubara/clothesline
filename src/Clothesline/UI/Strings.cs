@@ -89,6 +89,8 @@ public static class Strings
     public static string RopeColor => L("Line colour");
     public static string PegStyle => L("Clothespins");
     public static string Bows => L("Bows at the ends of the line");
+    public static string AutoArrange => L("Arrange photos evenly along the line");
+    public static string AutoArrangeTip => L("Off, each photo stays where you put it");
     public static string Appearance => L("Appearance");
     public static string LanguageLabel => L("Language");
     public static string Auto => L("Follow Windows");
@@ -174,6 +176,8 @@ public static class Strings
         ["Line colour"] = "لون الحبل",
         ["Clothespins"] = "المشابك",
         ["Bows at the ends of the line"] = "عُقد على طرفَي الحبل",
+        ["Arrange photos evenly along the line"] = "ترتيب الصور بالتساوي على طول الحبل",
+        ["Off, each photo stays where you put it"] = "عند الإيقاف، تبقى كل صورة حيث وضعتها",
         ["Appearance"] = "السمة",
         ["Language"] = "اللغة",
         ["Follow Windows"] = "حسب Windows",

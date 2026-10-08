@@ -26,6 +26,8 @@ public sealed class Pegged
     /// <summary>Kept on purpose: never pushed off by newer captures.</summary>
     public bool Pinned { get; set; }
     public DateTime HungAt { get; } = DateTime.Now;
+    /// <summary>Where it hangs along the line, as a fraction of the width, when photos are not arranged automatically.</summary>
+    public double? Spot { get; set; }
 
     public Pegged(string path, Thumbnail thumb)
     {
@@ -147,6 +149,15 @@ public sealed class Line
             bool quiet = n > 0;
             Later(0.06 * n, () => Drop(id, quiet));
         }
+    }
+
+    /// <summary>Remembers where a photo was put by hand.</summary>
+    public void SetSpot(Guid id, double fraction, bool save)
+    {
+        var item = Find(id);
+        if (item is null) return;
+        item.Spot = Math.Clamp(fraction, 0, 1);
+        if (save) Save();
     }
 
     /// <summary>Moves a photo to another place on the line. `liveIndex` counts only photos that are not falling.</summary>
@@ -341,6 +352,7 @@ public sealed class Line
         if (!_persist) return;
         Settings.Current.Pegged = _items.Where(i => !i.Falling).Select(i => i.Path).ToList();
         Settings.Current.PinnedPaths = _items.Where(i => !i.Falling && i.Pinned).Select(i => i.Path).ToList();
+        Settings.Current.Spots = _items.Where(i => !i.Falling && i.Spot is not null).ToDictionary(i => i.Path, i => i.Spot!.Value, StringComparer.OrdinalIgnoreCase);
         Settings.Current.Save();
     }
 
@@ -351,6 +363,7 @@ public sealed class Line
             {
                 item.Used = true;
                 item.Pinned = Settings.Current.PinnedPaths.Contains(path, StringComparer.OrdinalIgnoreCase);
+                if (Settings.Current.Spots.TryGetValue(path, out var spot)) item.Spot = spot;
             }
     }
 

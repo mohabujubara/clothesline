@@ -271,6 +271,9 @@ public sealed class PeggedControl : Canvas
     }
 
     public double CenterX => _x.Value;
+    public double TargetX => _x.Target;
+    /// <summary>The rope sags, so the card follows it up and down as it moves along.</summary>
+    public Func<double, double>? RopeYAt { get; set; }
 
     /// <summary>The card's rectangle in canvas coordinates, ignoring the tilt. Used to decide where the pointer counts.</summary>
     public Rect CardRect
@@ -367,6 +370,12 @@ public sealed class PeggedControl : Canvas
         _copiedOpacity.Step(dt); _copiedOffset.Step(dt); _shadow.Step(dt);
 
         SetLeft(this, _x.Value - Layout.CardWidth / 2);
+        if (RopeYAt is not null)
+        {
+            double ropeY = RopeYAt(_x.Value);
+            SetTop(this, ropeY - Layout.PinAbove);
+            Height = Layout.PanelHeight - ropeY;
+        }
         _rotate.Angle = _swing.Value + Item.Tilt;
         _drop.Y = _arrive.Value;
         Opacity = Item.Falling || Item.Flying ? 0 : _opacity.Value;
