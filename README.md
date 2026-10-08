@@ -35,7 +35,8 @@ they land, sway in an occasional breeze, and fall off the screen when you let th
 |:--|:--|
 | Click | Copy the image. Paste it anywhere, as a picture or as a file. |
 | Press and hold, or click the pen in its corner | Mark it up: the photo opens enlarged with a ballpoint pen, a highlighter, circle, box, arrow and text tools, a blur for hiding names and numbers, six colours and three thicknesses. Every mark saves into the file as you go, with undo and redo, and *Revert to original* if you change your mind. *Edit in Paint* is in the right-click menu for anything more. |
-| *New note* in the tray menu | A sticky note hangs on the line, in yellow, pink, blue, green or orange. Write on it, and it swings, copies and drags out like any photo. Double click it to write again. |
+| Click the little yellow tag at the end of the line, or right-click the line | The same menu as the tray icon: new capture, new note, settings. |
+| *New note* in the menu | A sticky note hangs on the line, in yellow, pink, blue, green or orange. Write on it, and it swings, copies and drags out like any photo. Double click it to write again. |
 | Double click | Open it in Photos. |
 | Drag along the line | Put the photo where you want it. It stays there. With *Arrange photos evenly* on, the others make room instead. |
 | Drag the line itself | Move the whole line up or down the screen, below your tabs if you like. |

@@ -115,6 +115,7 @@ public sealed class LineWindow : Window
         foreach (var (_, rect) in Canvas.HitRects())
             if (rect.Contains(p.Value)) return true;
         if (Canvas.HintRect is { } hint && hint.Contains(p.Value)) return true;
+        if (Canvas.TagRect is { } tag && tag.Contains(p.Value)) return true;
         return Canvas.RopeDragging || Canvas.IsOverRope(p.Value);
     }
 

@@ -72,6 +72,7 @@ public static class Strings
     public static string TextTool => L("Text");
     public static string Blur => L("Blur");
     public static string NewNote => L("New note");
+    public static string Menu => L("Menu");
     public static string EditNote => L("Edit note");
     public static string NoteColour => L("Note colour");
     public static string NotePlaceholder => L("Write a note2026");
@@ -184,6 +185,7 @@ public static class Strings
         ["Text"] = "نص",
         ["Blur"] = "تمويه",
         ["New note"] = "ملاحظة جديدة",
+        ["Menu"] = "القائمة",
         ["Edit note"] = "تحرير الملاحظة",
         ["Note colour"] = "لون الملاحظة",
         ["Write a note…"] = "اكتب ملاحظة…",

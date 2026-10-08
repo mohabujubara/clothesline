@@ -17,6 +17,7 @@ public sealed class LineCanvas : Canvas
     private readonly Grid _rope;
     private readonly Path _ropeShadow, _ropeCore, _ropeHighlight;
     private Path? _bowLeft, _bowRight;
+    private readonly Grid _tag;
     private PeggedControl? _held;
     private int _topZ = 10;
     private bool _ropeDrag;
@@ -94,6 +95,16 @@ public sealed class LineCanvas : Canvas
         Strings.LanguageChanged += Repaint;
         MouseLeftButtonDown += OnRopeDown;
         MouseLeftButtonUp += OnRopeUp;
+        MouseRightButtonUp += (_, e) =>
+        {
+            var p = e.GetPosition(this);
+            if (IsOverRope(p) || (TagRect is { } t && t.Contains(p))) { e.Handled = true; MenuRequested?.Invoke(); }
+        };
+
+        // A small paper tag always hangs at the end of the line: the menu, within reach.
+        _tag = BuildTag();
+        Children.Add(_tag);
+        SetZIndex(_tag, 2);
         LostMouseCapture += (_, _) => { if (_ropeDrag) { _ropeDrag = false; RopeDragEnded?.Invoke(); } };
         SizeChanged += (_, _) => Relayout(snap: true);
         Sync();
@@ -211,6 +222,9 @@ public sealed class LineCanvas : Canvas
         }
         double mid = _width / 2;
         _hint.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        double tagX = _width - 30;
+        SetLeft(_tag, tagX - Layout.CardWidth / 2);
+        SetTop(_tag, Layout.RopeY(tagX, _width) - Layout.PinAbove * 0.75);
         SetLeft(_hint, mid - _hint.DesiredSize.Width / 2);
         SetTop(_hint, Layout.RopeY(mid, _width) + 34 - _hint.DesiredSize.Height / 2);
     }
@@ -313,6 +327,46 @@ public sealed class LineCanvas : Canvas
     }
 
     // MARK: Moving the line itself
+
+    /// <summary>The menu was asked for, from the tag or a right click on the rope.</summary>
+    public event Action? MenuRequested;
+
+    private const double TagWidth = 34, TagHeight = 26;
+
+    private Grid BuildTag()
+    {
+        var g = new Grid { Width = Layout.CardWidth, Cursor = System.Windows.Input.Cursors.Hand, ToolTip = Strings.Menu, Background = null };
+        var peg = Pegs.Create(seed: 1);
+        peg.LayoutTransform = new ScaleTransform(0.75, 0.75);
+        peg.HorizontalAlignment = HorizontalAlignment.Center;
+        peg.VerticalAlignment = VerticalAlignment.Top;
+        peg.Margin = new Thickness(0, 0, 0, 0);
+        var paper = new Border
+        {
+            Width = TagWidth, Height = TagHeight, CornerRadius = new CornerRadius(3),
+            Background = new LinearGradientBrush(Color.FromRgb(0xFF, 0xF4, 0xA0), Color.FromRgb(0xF2, 0xDD, 0x6E), 90),
+            BorderBrush = new SolidColorBrush(Color.FromArgb(0x40, 0, 0, 0)), BorderThickness = new Thickness(0.6),
+            HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Top,
+            Margin = new Thickness(0, Layout.PinHeight * 0.75 - 7, 0, 0),
+            Effect = new DropShadowEffect { BlurRadius = 8, ShadowDepth = 2, Direction = 270, Opacity = 0.25, Color = Colors.Black },
+            RenderTransformOrigin = new Point(0.5, 0), RenderTransform = new RotateTransform(-4),
+            Child = new Path
+            {
+                Data = Geometry.Parse("M0,5 H10 M5,0 V10"), Stroke = new SolidColorBrush(Color.FromRgb(0x5A, 0x48, 0x1E)), StrokeThickness = 1.8,
+                StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round, Width = 10, Height = 10, Stretch = Stretch.Uniform,
+            },
+        };
+        g.Children.Add(paper);
+        g.Children.Add(peg);
+        g.MouseLeftButtonUp += (_, e) => { e.Handled = true; MenuRequested?.Invoke(); };
+        g.MouseRightButtonUp += (_, e) => { e.Handled = true; MenuRequested?.Invoke(); };
+        return g;
+    }
+
+    /// <summary>Where the tag hangs, for hit testing.</summary>
+    public Rect? TagRect => _width > 0 && _tag.Opacity > 0
+        ? new Rect(GetLeft(_tag) + (Layout.CardWidth - TagWidth) / 2 - 4, GetTop(_tag), TagWidth + 8, Layout.PinHeight * 0.75 + TagHeight + 2)
+        : null;
 
     public event Action? RopeDragStarted;
     public event Action? RopeDragEnded;
