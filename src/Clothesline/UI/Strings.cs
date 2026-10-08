@@ -11,6 +11,10 @@ public static class Strings
     public const string TakeEverythingDown = "Take everything down";
     public const string CatchClipboard = "Catch clipboard captures";
     public const string CatchClipboardTip = "Win+Shift+S and PrtScn captures hang even when no file is saved";
+    public const string StayDownWhileUnused = "Stay down until each capture is used";
+    public const string StayDownWhileUnusedTip = "The line waits while a capture has not been copied, dragged or opened";
+    public const string TakeDownAfterDrag = "Take down after dragging into an app";
+    public const string TakeDownAfterDragTip = "A photo dropped into a chat or an app leaves the line, like one saved to a folder";
     public const string OpenScreenshotsFolder = "Open Screenshots folder";
     public const string OpenInboxFolder = "Open caught captures folder";
     public const string Sounds = "Sounds";

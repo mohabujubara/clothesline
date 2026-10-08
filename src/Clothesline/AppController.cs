@@ -351,7 +351,8 @@ public sealed class AppController : IDisposable
         bool inside = zone.Contains(mouse);
         if (inside && _pinned) _pinned = false;
 
-        bool busy = _pinned || dragging || _line.PressedId is not null || now < _peekUntil;
+        bool pendingHold = Settings.Current.StayDownWhileUnused && _line.HasUnused;
+        bool busy = _pinned || dragging || _line.PressedId is not null || now < _peekUntil || pendingHold;
         if (inside || busy)
         {
             _awaySince = null;
@@ -413,6 +414,22 @@ public sealed class AppController : IDisposable
         catchItem.IsChecked = Settings.Current.CatchClipboard;
         catchItem.ToolTip = Strings.CatchClipboardTip;
         menu.Items.Add(catchItem);
+        var stay = PeggedControl.MenuItemFor(Strings.StayDownWhileUnused, () =>
+        {
+            Settings.Current.StayDownWhileUnused = !Settings.Current.StayDownWhileUnused;
+            Settings.Current.Save();
+        });
+        stay.IsChecked = Settings.Current.StayDownWhileUnused;
+        stay.ToolTip = Strings.StayDownWhileUnusedTip;
+        menu.Items.Add(stay);
+        var afterDrag = PeggedControl.MenuItemFor(Strings.TakeDownAfterDrag, () =>
+        {
+            Settings.Current.TakeDownAfterDrag = !Settings.Current.TakeDownAfterDrag;
+            Settings.Current.Save();
+        });
+        afterDrag.IsChecked = Settings.Current.TakeDownAfterDrag;
+        afterDrag.ToolTip = Strings.TakeDownAfterDragTip;
+        menu.Items.Add(afterDrag);
         menu.Items.Add(PeggedControl.MenuItemFor(Strings.OpenScreenshotsFolder, () => Shell.OpenFolder(Shell.ScreenshotsFolder())));
         menu.Items.Add(PeggedControl.MenuItemFor(Strings.OpenInboxFolder, () => Shell.OpenFolder(Inbox.Folder)));
         menu.Items.Add(new Separator());

@@ -18,6 +18,10 @@ public sealed class Settings
     public List<string> Pegged { get; set; } = new();
     public bool SoundOn { get; set; } = true;
     public bool CatchClipboard { get; set; } = true;
+    /// <summary>Keep the line down while a capture has not been used yet.</summary>
+    public bool StayDownWhileUnused { get; set; }
+    /// <summary>A photo dragged into an app leaves the line, as if it had been dropped into a folder.</summary>
+    public bool TakeDownAfterDrag { get; set; }
     public bool Welcomed { get; set; }
     public string HotKey { get; set; } = "Ctrl+Alt+T";
     /// <summary>Extra folders to watch, for ShareX, Greenshot and friends.</summary>

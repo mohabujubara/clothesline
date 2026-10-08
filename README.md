@@ -63,6 +63,17 @@ Using ShareX, Greenshot or something else? Add its folder to `watchFolders` in t
 
 <br>
 
+## Two ways to work, from the tray menu.
+
+| | |
+|:--|:--|
+| **Stay down until each capture is used** | The line waits while a capture has not been copied, dragged or opened yet, instead of tucking away when the pointer leaves. Hide it with the shortcut or the tray icon whenever you like. |
+| **Take down after dragging into an app** | A photo dropped into a chat, an email or any app leaves the line, the way one dropped into a folder does. A caught capture goes to the Recycle Bin; a screenshot from `Pictures\Screenshots` just comes off the line. |
+
+Both are off by default, so the line behaves like Tendedero until you say otherwise.
+
+<br>
+
 ## Private by design.
 
 No account. No network. No analytics. No changes to your system settings.

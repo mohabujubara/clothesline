@@ -456,12 +456,24 @@ public sealed class PeggedControl : Canvas
             _downPoint = null;
         }
         Log.Notice($"Drag ended with effect {effect}");
+        bool accepted = effect != DragSource.DROPEFFECT_NONE;
+        if (accepted) Item.Used = true;
 
         // A plain move: the target copied the file and expects us to remove the
         // original. Explorer does optimised moves itself, so this is rare.
         if ((effect & DragSource.DROPEFFECT_MOVE) != 0 && System.IO.File.Exists(Item.Path))
         {
             try { System.IO.File.Delete(Item.Path); } catch (Exception ex) { Log.Error($"Could not finish the move: {ex.Message}"); }
+        }
+
+        // Dropped into an app and sent on its way: with the option on, it leaves the line too.
+        if (accepted && Settings.Current.TakeDownAfterDrag && System.IO.File.Exists(Item.Path))
+        {
+            var id = Item.Id;
+            var t = new DispatcherTimer { Interval = TimeSpan.FromSeconds(0.35) };
+            t.Tick += (_, _) => { t.Stop(); if (_line.Find(id) is { Falling: false }) _line.Discard(id); };
+            t.Start();
+            return;
         }
 
         // Moved into a folder: it is saved where you wanted it, and leaves the

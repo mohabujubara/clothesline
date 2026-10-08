@@ -21,6 +21,8 @@ public sealed class Pegged
     public bool Falling { get; set; }
     /// <summary>Still flying in from where it was captured; the card waits hidden.</summary>
     public bool Flying { get; set; }
+    /// <summary>Copied, dragged out, opened or edited at least once. Restored photos count as used.</summary>
+    public bool Used { get; set; }
 
     public Pegged(string path, Thumbnail thumb)
     {
@@ -67,6 +69,8 @@ public sealed class Line
     }
 
     public int LiveCount => _items.Count(i => !i.Falling);
+    /// <summary>Whether something hangs that has not been copied, dragged out or opened yet.</summary>
+    public bool HasUnused => _items.Any(i => !i.Falling && !i.Used);
 
     private readonly bool _persist;
 
@@ -151,6 +155,7 @@ public sealed class Line
     {
         var item = Find(id);
         if (item is null) return;
+        item.Used = true;
         try
         {
             var data = new DataObject();
@@ -178,6 +183,7 @@ public sealed class Line
     {
         var item = Find(id);
         if (item is null) return;
+        item.Used = true;
         if (!Shell.Open(item.Path)) System.Media.SystemSounds.Beep.Play();
     }
 
@@ -186,6 +192,7 @@ public sealed class Line
     {
         var item = Find(id);
         if (item is null) return;
+        item.Used = true;
         if (!Shell.Edit(item.Path)) System.Media.SystemSounds.Beep.Play();
     }
 
@@ -285,7 +292,7 @@ public sealed class Line
     private void Restore()
     {
         foreach (var path in Settings.Current.Pegged.ToList())
-            if (File.Exists(path)) Hang(path, quietly: true);
+            if (File.Exists(path) && Hang(path, quietly: true) is { } id && Find(id) is { } item) item.Used = true;
     }
 
     private void Later(double seconds, Action action)
