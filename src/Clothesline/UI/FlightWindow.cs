@@ -78,7 +78,7 @@ public sealed class FlightWindow : Window
 
         WindowStyle = WindowStyle.None;
         ResizeMode = ResizeMode.NoResize;
-        AllowsTransparency = false;
+        AllowsTransparency = true;
         Background = Brushes.Transparent;
         ShowInTaskbar = false;
         ShowActivated = false;
@@ -116,8 +116,6 @@ public sealed class FlightWindow : Window
         var source = (HwndSource)PresentationSource.FromVisual(this)!;
         FullScreen.Own.Add(source.Handle);
         AddExStyle(source.Handle, WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | WS_EX_TRANSPARENT);
-        source.CompositionTarget.BackgroundColor = Colors.Transparent;
-        MakeGlassSheet(source.Handle);
         SetWindowPos(source.Handle, HWND_TOPMOST, _windowRect.Left, _windowRect.Top, _windowRect.Width, _windowRect.Height, SWP_NOACTIVATE);
     }
 

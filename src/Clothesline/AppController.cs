@@ -283,6 +283,7 @@ public sealed class AppController : IDisposable
         {
             _pinned = false;
             _peekUntil = DateTime.MinValue;
+            _panel.ClickThrough = true;
             _panel.Canvas.UpdateHover(null);
         }
     }
@@ -338,6 +339,7 @@ public sealed class AppController : IDisposable
 
         if (!_isRevealed)
         {
+            _panel.ClickThrough = true;
             // The top edge is where every maximised window keeps its tabs, so the
             // line only comes down when the pointer rests there, still, with no
             // button pressed. A click up there says you are working, not asking.
@@ -374,6 +376,7 @@ public sealed class AppController : IDisposable
         bool dragging = DragSource.IsDragging || _line.DraggingId is not null;
         bool holding = _line.PressedId is not null || _panel.Canvas.RopeDragging || _panel.Canvas.Cards.Any(c => c.Reordering);
         _panel.HoldMouse = dragging || holding;
+        _panel.ClickThrough = !(dragging || holding || _line.MenuOpen || _panel.IsOverPhoto(mouse));
         var local = _panel.ToCanvas(mouse);
         _panel.Canvas.UpdateHover(dragging ? null : local);
 

@@ -24,13 +24,27 @@ public sealed class LineWindow : Window
     /// <summary>While a drag or a press is in progress the whole strip stays solid, so events keep coming.</summary>
     public bool HoldMouse { get; set; }
 
+    private bool _clickThrough = true;
+
+    /// <summary>True: every click goes to the window underneath. False: the strip takes the mouse.</summary>
+    public bool ClickThrough
+    {
+        get => _clickThrough;
+        set
+        {
+            if (_clickThrough == value || Handle == IntPtr.Zero) return;
+            _clickThrough = value;
+            if (value) AddExStyle(Handle, WS_EX_TRANSPARENT); else RemoveExStyle(Handle, WS_EX_TRANSPARENT);
+        }
+    }
+
     public LineWindow(Line line)
     {
         Canvas = new LineCanvas(line);
         Title = Strings.AppName;
         WindowStyle = WindowStyle.None;
         ResizeMode = ResizeMode.NoResize;
-        AllowsTransparency = false;
+        AllowsTransparency = true;
         Background = Brushes.Transparent;
         ShowInTaskbar = false;
         ShowActivated = false;
@@ -69,9 +83,11 @@ public sealed class LineWindow : Window
         _source = (HwndSource)PresentationSource.FromVisual(this)!;
         Handle = _source.Handle;
         FullScreen.Own.Add(Handle);
-        AddExStyle(Handle, WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE);
-        _source.CompositionTarget.BackgroundColor = Colors.Transparent;
-        MakeGlassSheet(Handle);
+        // Per pixel transparency: where nothing is drawn, clicks reach the window
+        // underneath, in any app. WS_EX_TRANSPARENT makes the whole strip pass
+        // clicks through, and is lifted only while the pointer is over something.
+        AddExStyle(Handle, WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | WS_EX_TRANSPARENT);
+        _clickThrough = true;
         _source.AddHook(Hook);
     }
 
