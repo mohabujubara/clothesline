@@ -2,10 +2,10 @@
 # and reports what the app did: window placement, styles, hung files and the log.
 $ErrorActionPreference = 'Continue'
 $root = Split-Path -Parent $PSScriptRoot
-$exe = Join-Path $root 'src\Clothesline\bin\Debug\net8.0-windows10.0.19041.0\Clothesline.exe'
-$inbox = Join-Path $env:LOCALAPPDATA 'Clothesline\Screenshots'
-$settings = Join-Path $env:LOCALAPPDATA 'Clothesline\settings.json'
-$log = Join-Path $env:LOCALAPPDATA 'Clothesline\log.txt'
+$exe = Join-Path $root 'src\Snapline\bin\Debug\net8.0-windows10.0.19041.0\Snapline.exe'
+$inbox = Join-Path $env:LOCALAPPDATA 'Snapline\Screenshots'
+$settings = Join-Path $env:LOCALAPPDATA 'Snapline\settings.json'
+$log = Join-Path $env:LOCALAPPDATA 'Snapline\log.txt'
 
 Add-Type @"
 using System;
@@ -22,13 +22,13 @@ public static class W {
 }
 "@
 
-Stop-Process -Name Clothesline -Force -ErrorAction SilentlyContinue
+Stop-Process -Name Snapline -Force -ErrorAction SilentlyContinue
 Start-Sleep -Milliseconds 500
 if (Test-Path $log) { Remove-Item $log }
 Start-Process $exe
 Start-Sleep 3
 
-$h = [W]::FindWindow($null, 'Clothesline')
+$h = [W]::FindWindow($null, 'Snapline')
 "hwnd: $h"
 if ($h -ne [IntPtr]::Zero) {
   $r = New-Object W+RECT; [W]::GetWindowRect($h, [ref]$r) | Out-Null

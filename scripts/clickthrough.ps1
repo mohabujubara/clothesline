@@ -4,7 +4,7 @@
 # window reports whether it received the click. The pointer is put back after.
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
-$exe = Join-Path $root 'src\Clothesline\bin\Debug\net8.0-windows10.0.19041.0\Clothesline.exe'
+$exe = Join-Path $root 'src\Snapline\bin\Debug\net8.0-windows10.0.19041.0\Snapline.exe'
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -ReferencedAssemblies System.Drawing @"
@@ -32,9 +32,9 @@ public static class Q {
 "@
 [Q]::SetProcessDPIAware() | Out-Null
 
-$proc = Get-Process Clothesline -ErrorAction SilentlyContinue | Where-Object { $_.Path -like '*bin\Debug*' } | Select-Object -First 1
-if (-not $proc) { Start-Process $exe; Start-Sleep 3; $proc = Get-Process Clothesline | Where-Object { $_.Path -like '*bin\Debug*' } | Select-Object -First 1 }
-$panel = [Q]::Find([uint32]$proc.Id, 'Clothesline')
+$proc = Get-Process Snapline -ErrorAction SilentlyContinue | Where-Object { $_.Path -like '*bin\Debug*' } | Select-Object -First 1
+if (-not $proc) { Start-Process $exe; Start-Sleep 3; $proc = Get-Process Snapline | Where-Object { $_.Path -like '*bin\Debug*' } | Select-Object -First 1 }
+$panel = [Q]::Find([uint32]$proc.Id, 'Snapline')
 $r = New-Object Q+RECT; [Q]::GetWindowRect($panel, [ref]$r) | Out-Null
 "panel: $panel rect $($r.L),$($r.T)-$($r.R),$($r.B)"
 

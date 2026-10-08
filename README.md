@@ -2,7 +2,7 @@
   <img src="docs/icon.png" width="96" height="96" alt="">
 </p>
 
-<h1 align="center">Clothesline</h1>
+<h1 align="center">Snapline</h1>
 
 <p align="center">
   Screenshots, hung out to dry. For Windows 10 and 11.
@@ -14,7 +14,7 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/hero-dark.png">
-  <img src="docs/hero-light.png" alt="Clothesline. Screenshots, hung out to dry. Three screenshots in glass frames hang from a bronze line with wooden pegs across the top of a Windows desktop.">
+  <img src="docs/hero-light.png" alt="Snapline. Screenshots, hung out to dry. Three screenshots in glass frames hang from a bronze line with wooden pegs across the top of a Windows desktop.">
 </picture>
 
 <br>
@@ -59,14 +59,14 @@ they land, sway in an occasional breeze, and fall off the screen when you let th
 
 ## Every capture, not just the saved ones.
 
-Clothesline watches `Pictures\Screenshots`, where <kbd>Win</kbd>&thinsp;<kbd>PrtScn</kbd> and the
+Snapline watches `Pictures\Screenshots`, where <kbd>Win</kbd>&thinsp;<kbd>PrtScn</kbd> and the
 Snipping Tool save their files. It also catches captures that only reach the clipboard:
 <kbd>Win</kbd>&thinsp;<kbd>Shift</kbd>&thinsp;<kbd>S</kbd> with automatic saving turned off,
-<kbd>PrtScn</kbd>, <kbd>Alt</kbd>&thinsp;<kbd>PrtScn</kbd>. Those are written to Clothesline's own
+<kbd>PrtScn</kbd>, <kbd>Alt</kbd>&thinsp;<kbd>PrtScn</kbd>. Those are written to Snapline's own
 folder and hang like any other. Only a pure image is caught: copying a picture out of a web
 page or a document, which brings text along, is left alone.
 
-Caught captures are the only files Clothesline ever deletes. Discard one and it goes to the
+Caught captures are the only files Snapline ever deletes. Discard one and it goes to the
 Recycle Bin. Drag it to a folder, or choose *Save to Desktop*, to keep it. Screenshots from
 `Pictures\Screenshots` or anywhere else stay where they are; taking one down only takes it
 off the line.
@@ -119,7 +119,7 @@ Both are off by default, so the line behaves like Tendedero until you say otherw
 ## Private by design.
 
 No account. No network. No analytics. No changes to your system settings.
-Clothesline runs entirely on your PC, and your screenshots never leave it.
+Snapline runs entirely on your PC, and your screenshots never leave it.
 
 <br>
 
@@ -138,14 +138,14 @@ Clothesline runs entirely on your PC, and your screenshots never leave it.
 
 ## Install
 
-1. Download **Clothesline-portable.exe** from the [latest release](https://github.com/mohabujubara/clothesline/releases/latest).
+1. Download **Snapline-portable.exe** from the [latest release](https://github.com/mohabujubara/snapline/releases/latest).
 2. Put it anywhere you like and run it. It lives in the notification area, next to the clock.
 3. Right click its icon and choose *Start with Windows* to keep it around.
 
 The first time, SmartScreen may say "Windows protected your PC" because the app is not
 code-signed yet. Click *More info*, then *Run anyway*.
 
-There is also a much smaller build, `Clothesline.exe`, for PCs that already have the
+There is also a much smaller build, `Snapline.exe`, for PCs that already have the
 [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0).
 
 <br>
@@ -153,10 +153,10 @@ There is also a much smaller build, `Clothesline.exe`, for PCs that already have
 ## Build from source
 
 ```powershell
-git clone https://github.com/mohabujubara/clothesline.git
-cd clothesline
-scripts\build.ps1            # dist\win-x64\Clothesline.exe, needs the .NET 8 Desktop Runtime
-scripts\build.ps1 -Portable  # dist\portable\Clothesline.exe, self-contained
+git clone https://github.com/mohabujubara/snapline.git
+cd snapline
+scripts\build.ps1            # dist\win-x64\Snapline.exe, needs the .NET 8 Desktop Runtime
+scripts\build.ps1 -Portable  # dist\portable\Snapline.exe, self-contained
 ```
 
 Requires the .NET 8 SDK. Visual Studio is optional.
@@ -182,11 +182,11 @@ Requires the .NET 8 SDK. Visual Studio is optional.
 | `Interop/DragSource.cs` | Shell-style drag and drop with a drag image |
 | `Interop/FullScreen.cs` | Knows when to stay hidden |
 
-Settings and the log live in `%LOCALAPPDATA%\Clothesline`. The hot key, extra folders to
+Settings and the log live in `%LOCALAPPDATA%\Snapline`. The hot key, extra folders to
 watch and the folder for caught captures can be changed in `settings.json`.
 
 The icon and the images in this README are drawn in code: `scripts\make-icon.ps1`,
-`scripts\make-samples.ps1`, and `Clothesline.exe --snapshot out.png image1 image2 …`.
+`scripts\make-samples.ps1`, and `Snapline.exe --snapshot out.png image1 image2 …`.
 
 </details>
 
@@ -194,6 +194,6 @@ The icon and the images in this README are drawn in code: `scripts\make-icon.ps1
 
 ## Thanks
 
-Clothesline is a port of [Tendedero](https://github.com/alejandrobujan/tendedero) by Alejandro
+Snapline is a port of [Tendedero](https://github.com/alejandrobujan/tendedero) by Alejandro
 Buján, whose design, motion and words it follows closely. The name and icon of Tendedero are
 his; this project uses its own.

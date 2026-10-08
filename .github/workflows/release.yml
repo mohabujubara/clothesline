@@ -32,13 +32,13 @@ jobs:
         run: |
           $v = if ($env:GITHUB_REF -like 'refs/tags/v*') { $env:GITHUB_REF.Substring(11) } else { 'dev' }
           New-Item -ItemType Directory -Force out | Out-Null
-          Copy-Item dist/portable/Clothesline.exe "out/Clothesline-$v-portable.exe"
-          Copy-Item dist/win-x64/Clothesline.exe "out/Clothesline-$v.exe"
+          Copy-Item dist/portable/Snapline.exe "out/Snapline-$v-portable.exe"
+          Copy-Item dist/win-x64/Snapline.exe "out/Snapline-$v.exe"
           Get-ChildItem out
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Clothesline
+          name: Snapline
           path: out/*.exe
 
       - name: Release
@@ -48,7 +48,7 @@ jobs:
           files: out/*.exe
           generate_release_notes: true
           body: |
-            **Clothesline-*-portable.exe** runs on any Windows 10 or 11 PC. Nothing to install.
-            **Clothesline-*.exe** is the small build and needs the [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0).
+            **Snapline-*-portable.exe** runs on any Windows 10 or 11 PC. Nothing to install.
+            **Snapline-*.exe** is the small build and needs the [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0).
 
             The app is not code-signed yet, so SmartScreen may show "Windows protected your PC" the first time. Click *More info*, then *Run anyway*.

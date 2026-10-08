@@ -5,8 +5,8 @@
 # Needs ffmpeg on the PATH or in $env:FFMPEG.
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
-$exe = Join-Path $root 'src\Clothesline\bin\Debug\net8.0-windows10.0.19041.0\Clothesline.exe'
-$frames = Join-Path $env:TEMP 'clothesline-frames'
+$exe = Join-Path $root 'src\Snapline\bin\Debug\net8.0-windows10.0.19041.0\Snapline.exe'
+$frames = Join-Path $env:TEMP 'snapline-frames'
 $ffmpeg = if ($env:FFMPEG) { $env:FFMPEG } else { 'ffmpeg' }
 
 if (Test-Path $frames) { Get-ChildItem $frames -Filter *.png | ForEach-Object { [System.IO.File]::Delete($_.FullName) } }

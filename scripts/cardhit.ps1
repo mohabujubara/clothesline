@@ -1,7 +1,7 @@
 # Checks that the strip takes the pointer over a photo and lets it through beside one.
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
-$exe = Join-Path $root 'src\Clothesline\bin\Debug\net8.0-windows10.0.19041.0\Clothesline.exe'
+$exe = Join-Path $root 'src\Snapline\bin\Debug\net8.0-windows10.0.19041.0\Snapline.exe'
 Add-Type @"
 using System; using System.Runtime.InteropServices; using System.Text;
 public static class K {
@@ -24,15 +24,15 @@ public static class K {
 }
 "@
 [K]::SetProcessDPIAware() | Out-Null
-$t = Join-Path $env:LOCALAPPDATA 'Clothesline\Screenshots\Screenshot clicktest.png'
+$t = Join-Path $env:LOCALAPPDATA 'Snapline\Screenshots\Screenshot clicktest.png'
 Start-Process $exe; Start-Sleep 3
-$proc = Get-Process Clothesline | Select-Object -First 1
+$proc = Get-Process Snapline | Select-Object -First 1
 Start-Process $exe; Start-Sleep -Milliseconds 1500   # toggle: reveal
 # The capture arrives after launch, so the watcher sees it as new.
 Copy-Item (Join-Path $root 'docs\samples\sunset.png') $t -Force; Start-Sleep -Milliseconds 2500
-$panel = [K]::Find([uint32]$proc.Id, 'Clothesline')
+$panel = [K]::Find([uint32]$proc.Id, 'Snapline')
 $r = New-Object K+RECT; [K]::GetWindowRect($panel, [ref]$r) | Out-Null
-$s = Get-Content (Join-Path $env:LOCALAPPDATA 'Clothesline\settings.json') | ConvertFrom-Json
+$s = Get-Content (Join-Path $env:LOCALAPPDATA 'Snapline\settings.json') | ConvertFrom-Json
 $prop = $s.spots.PSObject.Properties | Where-Object { $_.Name -like '*clicktest*' } | Select-Object -First 1
 $frac = if ($prop) { [double]$prop.Value } else { 0.5 }
 "panel $panel rect $($r.L),$($r.T)-$($r.R),$($r.B)  spot fraction $frac"
@@ -48,5 +48,5 @@ $pt.X = $cx + [int](320 * $scale)
 $under2 = [K]::WindowFromPoint($pt)
 "beside the card: is panel? $($under2 -eq $panel)   (expected False)"
 [K]::SetCursorPos($saved.X, $saved.Y) | Out-Null
-Stop-Process -Name Clothesline -Force -ErrorAction SilentlyContinue; Start-Sleep 1
+Stop-Process -Name Snapline -Force -ErrorAction SilentlyContinue; Start-Sleep 1
 [System.IO.File]::Delete($t); "cleaned"

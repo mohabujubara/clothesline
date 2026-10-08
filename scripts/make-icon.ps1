@@ -1,10 +1,10 @@
-# Draws the app icon in code and packs it into src\Clothesline\Assets\Clothesline.ico.
+# Draws the app icon in code and packs it into src\Snapline\Assets\Snapline.ico.
 # A soft blue to lilac square, a sagging line and three glass photos on clips.
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
 
 $root = Split-Path -Parent $PSScriptRoot
-$out = Join-Path $root 'src\Clothesline\Assets\Clothesline.ico'
+$out = Join-Path $root 'src\Snapline\Assets\Snapline.ico'
 $pngOut = Join-Path $root 'docs\icon.png'
 New-Item -ItemType Directory -Force (Split-Path $out) | Out-Null
 New-Item -ItemType Directory -Force (Split-Path $pngOut) | Out-Null
