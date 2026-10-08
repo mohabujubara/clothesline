@@ -66,6 +66,8 @@ public sealed class Line
     public Guid? PressedId { get => _pressedId; set { if (_pressedId != value) { _pressedId = value; StateChanged?.Invoke(); } } }
 
     public int MaxItems { get; set; } = 8;
+    /// <summary>A context menu is open: clicks belong to it, not to the window underneath.</summary>
+    public bool MenuOpen { get; set; }
 
     public bool SoundOn
     {
@@ -145,6 +147,21 @@ public sealed class Line
             bool quiet = n > 0;
             Later(0.06 * n, () => Drop(id, quiet));
         }
+    }
+
+    /// <summary>Moves a photo to another place on the line. `liveIndex` counts only photos that are not falling.</summary>
+    public void Move(Guid id, int liveIndex)
+    {
+        var item = Find(id);
+        if (item is null) return;
+        var live = _items.Where(i => !i.Falling && i != item).ToList();
+        liveIndex = Math.Clamp(liveIndex, 0, live.Count);
+        if (live.Count > 0 && liveIndex < live.Count && _items.IndexOf(live[liveIndex]) == _items.IndexOf(item) + 1) return;
+        _items.Remove(item);
+        int at = liveIndex < live.Count ? _items.IndexOf(live[liveIndex]) : _items.Count;
+        _items.Insert(at, item);
+        Save();
+        ItemsChanged?.Invoke();
     }
 
     /// <summary>Photos whose file was deleted or moved away fall off by themselves.</summary>

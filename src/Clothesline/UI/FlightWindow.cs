@@ -27,7 +27,7 @@ public sealed class FlightWindow : Window
     private readonly Border _glass;
     private readonly Image _photo;
     private readonly Border _edge;
-    private readonly Border _clip;
+    private readonly Grid _clip;
     private readonly RotateTransform _rotate = new();
     private readonly DropShadowEffect _shadow;
 
@@ -41,22 +41,22 @@ public sealed class FlightWindow : Window
     private static readonly List<FlightWindow> Current = new();
 
     /// <summary>A capture flying from where it was taken to its place on the line. Rects in physical pixels.</summary>
-    public static void Fly(BitmapSource image, RECT from, RECT to, double tilt, Display monitor, Action completion)
+    public static void Fly(BitmapSource image, RECT from, RECT to, double tilt, Display monitor, int seed, Action completion)
     {
-        var w = new FlightWindow(image, from, to, tilt, monitor, falling: false, Duration, completion);
+        var w = new FlightWindow(image, from, to, tilt, monitor, falling: false, Duration, completion, seed);
         Current.Add(w);
         w.Run();
     }
 
     /// <summary>A discarded card falling off the line: 520 points down, tilting further, fading, 0.55 s ease in.</summary>
-    public static void Fall(BitmapSource image, RECT card, double tilt, Display monitor)
+    public static void Fall(BitmapSource image, RECT card, double tilt, Display monitor, int seed)
     {
-        var w = new FlightWindow(image, card, card, tilt, monitor, falling: true, 0.55, null);
+        var w = new FlightWindow(image, card, card, tilt, monitor, falling: true, 0.55, null, seed);
         Current.Add(w);
         w.Run();
     }
 
-    private FlightWindow(BitmapSource image, RECT from, RECT to, double tilt, Display monitor, bool falling, double duration, Action? completion)
+    private FlightWindow(BitmapSource image, RECT from, RECT to, double tilt, Display monitor, bool falling, double duration, Action? completion, int seed)
     {
         _tilt = tilt;
         _falling = falling;
@@ -97,13 +97,9 @@ public sealed class FlightWindow : Window
             BorderThickness = new Thickness(0.75),
             BorderBrush = Theme.Freeze(new LinearGradientBrush(Theme.GlassEdgeTop, Theme.GlassEdgeBottom, 90)),
         };
-        _clip = new Border
-        {
-            Width = Layout.PinWidth, Height = Layout.PinHeight, CornerRadius = new CornerRadius(3.5),
-            Background = Glass.MetalBrush(),
-            BorderThickness = new Thickness(0.6), BorderBrush = Theme.Freeze(new SolidColorBrush(Theme.Gray(1, 0.7))),
-            HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top,
-        };
+        _clip = Pegs.Create(seed: seed, pinned: false);
+        _clip.HorizontalAlignment = HorizontalAlignment.Left;
+        _clip.VerticalAlignment = VerticalAlignment.Top;
         _container.Children.Add(_glass);
         _container.Children.Add(_photo);
         _container.Children.Add(_edge);
@@ -194,7 +190,7 @@ public sealed class FlightWindow : Window
         _photo.Clip = new RectangleGeometry(new Rect(0, 0, Math.Max(0, w - 2 * inset), Math.Max(0, h - 2 * inset)), pr, pr);
 
         // The clip grips the top edge: 26 points tall, 12 of them over the card.
-        _clip.Margin = new Thickness(w / 2 - Layout.PinWidth / 2, -(Layout.PinHeight - 12), 0, 0);
+        _clip.Margin = new Thickness(w / 2 - _clip.Width / 2, -(Layout.PinHeight - 12), 0, 0);
         _clip.Opacity = chrome;
     }
 }

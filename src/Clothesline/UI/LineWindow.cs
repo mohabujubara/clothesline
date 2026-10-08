@@ -18,6 +18,8 @@ public sealed class LineWindow : Window
     public Display? Display { get; private set; }
     public IntPtr Handle { get; private set; }
     private HwndSource? _source;
+    private double _ropeStartOffset, _ropeStartY;
+    private readonly System.Windows.Threading.DispatcherTimer _ropeFollow = new() { Interval = TimeSpan.FromMilliseconds(16) };
 
     /// <summary>While a drag or a press is in progress the whole strip stays solid, so events keep coming.</summary>
     public bool HoldMouse { get; set; }
@@ -37,6 +39,24 @@ public sealed class LineWindow : Window
         Left = 0; Top = 0; Width = 800; Height = Layout.PanelHeight;
         Content = Canvas;
         Focusable = false;
+
+        // Holding the rope moves the whole line up or down the screen.
+        Canvas.RopeDragStarted += () =>
+        {
+            _ropeStartOffset = Settings.Current.LineOffset;
+            _ropeStartY = Displays.Cursor().Y;
+            _ropeFollow.Start();
+        };
+        _ropeFollow.Tick += (_, _) =>
+        {
+            if (Display is null) return;
+            double dy = (Displays.Cursor().Y - _ropeStartY) / Display.Scale;
+            double offset = Math.Max(0, _ropeStartOffset + dy);
+            if (Math.Abs(offset - Settings.Current.LineOffset) < 0.5) return;
+            Settings.Current.LineOffset = offset;
+            PlaceOn(Display);
+        };
+        Canvas.RopeDragEnded += () => { _ropeFollow.Stop(); Settings.Current.Save(); };
         SnapsToDevicePixels = false;
         UseLayoutRounding = false;
         TextOptions.SetTextFormattingMode(this, TextFormattingMode.Ideal);
@@ -94,7 +114,8 @@ public sealed class LineWindow : Window
         if (p is null) return false;
         foreach (var (_, rect) in Canvas.HitRects())
             if (rect.Contains(p.Value)) return true;
-        return Canvas.HintRect is { } hint && hint.Contains(p.Value);
+        if (Canvas.HintRect is { } hint && hint.Contains(p.Value)) return true;
+        return Canvas.RopeDragging || Canvas.IsOverRope(p.Value);
     }
 
     /// <summary>The line hangs on the screen you are using, under the taskbar if it is at the top.</summary>
@@ -104,17 +125,22 @@ public sealed class LineWindow : Window
         Display = m;
         int height = (int)Math.Round(Layout.PanelHeight * m.Scale);
         var work = m.Work;
+        // The line can hang lower than the very top, below the tabs of a maximised window.
+        double maxOffset = Math.Max(0, work.Height / m.Scale - Layout.PanelHeight);
+        double offset = Math.Clamp(Settings.Current.LineOffset, 0, maxOffset);
+        Settings.Current.LineOffset = offset;
+        int top = work.Top + (int)Math.Round(offset * m.Scale);
         if (Handle == IntPtr.Zero)
         {
-            Left = work.Left; Top = work.Top; Width = work.Width / m.Scale; Height = Layout.PanelHeight;
+            Left = work.Left; Top = top; Width = work.Width / m.Scale; Height = Layout.PanelHeight;
             return;
         }
         const uint flags = SWP_NOACTIVATE | SWP_NOZORDER;
-        SetWindowPos(Handle, IntPtr.Zero, work.Left, work.Top, work.Width, height, flags);
+        SetWindowPos(Handle, IntPtr.Zero, work.Left, top, work.Width, height, flags);
         // Crossing to a screen with another DPI makes Windows suggest a rescaled
         // frame first. Say it again, now that the DPI has settled.
-        if (GetWindowRect(Handle, out var r) && (r.Left != work.Left || r.Top != work.Top || r.Width != work.Width || r.Height != height))
-            SetWindowPos(Handle, IntPtr.Zero, work.Left, work.Top, work.Width, height, flags);
+        if (GetWindowRect(Handle, out var r) && (r.Left != work.Left || r.Top != top || r.Width != work.Width || r.Height != height))
+            SetWindowPos(Handle, IntPtr.Zero, work.Left, top, work.Width, height, flags);
         Canvas.Width = work.Width / m.Scale;
         Canvas.UpdateLayout();
     }

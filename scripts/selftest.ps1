@@ -1,8 +1,8 @@
-# Runs the Debug build, drops a sample capture into the caught-captures folder,
+﻿# Runs the Debug build, drops a sample capture into the caught-captures folder,
 # and reports what the app did: window placement, styles, hung files and the log.
 $ErrorActionPreference = 'Continue'
 $root = Split-Path -Parent $PSScriptRoot
-$exe = Join-Path $root 'src\Clothesline\bin\Debug\net8.0-windows\Clothesline.exe'
+$exe = Join-Path $root 'src\Clothesline\bin\Debug\net8.0-windows10.0.19041.0\Clothesline.exe'
 $inbox = Join-Path $env:LOCALAPPDATA 'Clothesline\Screenshots'
 $settings = Join-Path $env:LOCALAPPDATA 'Clothesline\settings.json'
 $log = Join-Path $env:LOCALAPPDATA 'Clothesline\log.txt'

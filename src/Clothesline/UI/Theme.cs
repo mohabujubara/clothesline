@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Media;
+using Clothesline.Core;
 using Microsoft.Win32;
 
 namespace Clothesline.UI;
@@ -16,6 +17,13 @@ public static class Theme
     private static bool? _override;
 
     public static void Override(bool dark) { _override = dark; AppsDark = SystemDark = dark; Apply(); }
+
+    /// <summary>Follows the Appearance setting: auto, light or dark.</summary>
+    public static void ApplySetting()
+    {
+        _override = Settings.Current.Appearance switch { "light" => false, "dark" => true, _ => null };
+        Refresh();
+    }
 
     public static void Read()
     {

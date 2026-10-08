@@ -1,9 +1,9 @@
-# Checks that the strip is really transparent and draws the line when revealed.
+﻿# Checks that the strip is really transparent and draws the line when revealed.
 # A magenta window of our own is placed under the strip, the strip is re-asserted
 # on top, and only that region (covered entirely by our two windows) is captured.
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
-$exe = Join-Path $root 'src\Clothesline\bin\Debug\net8.0-windows\Clothesline.exe'
+$exe = Join-Path $root 'src\Clothesline\bin\Debug\net8.0-windows10.0.19041.0\Clothesline.exe'
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -ReferencedAssemblies System.Drawing @"

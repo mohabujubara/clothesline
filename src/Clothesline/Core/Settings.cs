@@ -12,6 +12,15 @@ public sealed class Settings
 
     private static readonly string FilePath = Path.Combine(Folder, "settings.json");
 
+    // Declared before Current: static fields run in order, and Load needs the options.
+    private static readonly JsonSerializerOptions Options = new()
+    {
+        WriteIndented = true,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        PropertyNameCaseInsensitive = true,
+    };
+
     public static Settings Current { get; } = Load();
 
     /// <summary>Files hanging on the line, oldest first.</summary>
@@ -23,6 +32,21 @@ public sealed class Settings
     public bool StayDownWhileUnused { get; set; }
     /// <summary>A photo dragged into an app leaves the line, as if it had been dropped into a folder.</summary>
     public bool TakeDownAfterDrag { get; set; }
+    /// <summary>Bring the line down when the pointer rests still at the top edge of the screen.</summary>
+    public bool RevealAtTopEdge { get; set; } = true;
+    /// <summary>How long the pointer rests at the edge before the line comes down, in seconds.</summary>
+    public double RevealDelay { get; set; } = 0.5;
+    /// <summary>How far below the top of the work area the line hangs, in device independent pixels.</summary>
+    public double LineOffset { get; set; }
+    /// <summary>A preset name like "bronze", or a hex colour like "#8C5A2E".</summary>
+    public string RopeColor { get; set; } = "bronze";
+    /// <summary>wood, metal, mixed, red, blue, green or yellow.</summary>
+    public string PegStyle { get; set; } = "wood";
+    public bool Bows { get; set; } = true;
+    /// <summary>auto, light or dark.</summary>
+    public string Appearance { get; set; } = "auto";
+    /// <summary>auto, en or ar.</summary>
+    public string Language { get; set; } = "auto";
     public bool Welcomed { get; set; }
     public string HotKey { get; set; } = "Ctrl+Alt+T";
     /// <summary>Extra folders to watch, for ShareX, Greenshot and friends.</summary>
@@ -31,13 +55,6 @@ public sealed class Settings
     public string? InboxFolder { get; set; }
     /// <summary>Monitor DPI scale aware maximum; null means as many as fit.</summary>
     public int? MaxItems { get; set; }
-
-    private static readonly JsonSerializerOptions Options = new()
-    {
-        WriteIndented = true,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-    };
 
     private static Settings Load()
     {

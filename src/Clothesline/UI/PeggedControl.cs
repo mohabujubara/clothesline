@@ -46,7 +46,10 @@ public sealed class PeggedControl : Canvas
     private readonly Border _copied;
     private readonly TranslateTransform _copiedTranslate = new();
     private readonly DropShadowEffect _shadowEffect;
-    private readonly Grid _pin;
+    private Grid _pin = null!;
+    private bool _reordering;
+    private double _grabOffsetX;
+    private Point _downInCanvas;
     private readonly TextBlock _copiedText;
     private readonly TextBlock _tipName = new();
     private readonly TextBlock _tipMeta = new();
@@ -59,6 +62,7 @@ public sealed class PeggedControl : Canvas
     private static readonly TimeSpan HoldDuration = TimeSpan.FromMilliseconds(450);
 
     public bool Hovering => _hovering;
+    public bool Reordering => _reordering;
     public bool Active => !_swing.Resting || !_arrive.Resting || !_hoverScale.Resting || !_pressScale.Done || !_x.Resting
                           || !_opacity.Done || !_cardOpacity.Done || !_crossOpacity.Done || !_copiedOpacity.Done || !_shadow.Done;
 
@@ -155,10 +159,6 @@ public sealed class PeggedControl : Canvas
 
         Children.Add(_cardHost);
         Children.Add(_copied);
-        _pin = Glass.Clothespin();
-        Children.Add(_pin);
-        SetLeft(_pin, (Layout.CardWidth - Layout.PinWidth) / 2);
-        SetTop(_pin, 0);
         PaintPin();
 
         // A quiet tooltip: the file, its size and how long it has been hanging.
@@ -168,7 +168,7 @@ public sealed class PeggedControl : Canvas
         _tipMeta.Margin = new Thickness(0, 2, 0, 0);
         tip.Children.Add(_tipName);
         tip.Children.Add(_tipMeta);
-        var toolTip = new ToolTip { Content = tip };
+        var toolTip = new ToolTip { Content = tip, FlowDirection = Strings.Flow };
         toolTip.Opened += (_, _) => RefreshTip();
         ToolTipService.SetInitialShowDelay(_cardHost, 900);
         ToolTipService.SetShowDuration(_cardHost, 6000);
@@ -192,7 +192,11 @@ public sealed class PeggedControl : Canvas
         _cardHost.MouseMove += OnMouseMove;
         _cardHost.MouseLeftButtonUp += OnMouseUp;
         _cardHost.MouseRightButtonUp += OnRightClick;
-        _cardHost.LostMouseCapture += (_, _) => { if (!_startedDrag) EndPress(); };
+        _cardHost.LostMouseCapture += (_, _) =>
+        {
+            if (!_startedDrag) EndPress();
+            if (_reordering) { _reordering = false; (Parent as LineCanvas)?.EndReorder(this); }
+        };
 
         Opacity = 0;
         Arrive();
@@ -231,9 +235,17 @@ public sealed class PeggedControl : Canvas
         if (!Item.Flying) Nudge(2.2);
     }
 
+    /// <summary>A stable number for this photo, so a mixed peg keeps its colour.</summary>
+    private int Seed => Item.Path.Aggregate(17, (h, c) => h * 31 + c);
+
     private void PaintPin()
     {
-        ((Border)_pin.Children[0]).Background = Item.Pinned ? Glass.BrassBrush() : Glass.MetalBrush();
+        if (_pin is not null) Children.Remove(_pin);
+        _pin = Pegs.Create(seed: Seed, pinned: Item.Pinned);
+        Children.Add(_pin);
+        SetZIndex(_pin, 3);
+        SetLeft(_pin, (Layout.CardWidth - Layout.PinWidth) / 2);
+        SetTop(_pin, 0);
     }
 
     private void RefreshTip()
@@ -246,8 +258,8 @@ public sealed class PeggedControl : Canvas
     {
         var span = DateTime.Now - when;
         if (span.TotalSeconds < 45) return Strings.JustNow;
-        if (span.TotalMinutes < 60) return $"{(int)span.TotalMinutes} min ago";
-        if (span.TotalHours < 24) return $"{(int)span.TotalHours} h ago";
+        if (span.TotalMinutes < 60) return string.Format(Strings.MinutesAgo, (int)span.TotalMinutes);
+        if (span.TotalHours < 24) return string.Format(Strings.HoursAgo, (int)span.TotalHours);
         return when.ToString("d MMM HH:mm");
     }
 
@@ -387,7 +399,10 @@ public sealed class PeggedControl : Canvas
             return;
         }
         _downPoint = e.GetPosition(this);
+        _downInCanvas = Parent is UIElement parent ? e.GetPosition(parent) : _downPoint.Value;
+        _grabOffsetX = _downInCanvas.X - CenterX;
         _startedDrag = false;
+        _reordering = false;
         _didLongPress = false;
         _cardHost.CaptureMouse();
         SetPressed(true);
@@ -404,10 +419,37 @@ public sealed class PeggedControl : Canvas
     private void OnMouseMove(object sender, MouseEventArgs e)
     {
         if (_downPoint is null || _startedDrag || _didLongPress || e.LeftButton != MouseButtonState.Pressed) return;
-        var p = e.GetPosition(this);
-        if (Math.Abs(p.X - _downPoint.Value.X) < 4 && Math.Abs(p.Y - _downPoint.Value.Y) < 4) return;
-        _startedDrag = true;
+        var canvas = Parent as LineCanvas;
+        var p = canvas is not null ? e.GetPosition(canvas) : e.GetPosition(this);
+        double dx = p.X - _downInCanvas.X, dy = p.Y - _downInCanvas.Y;
+
+        if (_reordering)
+        {
+            // Pulled away from the line: it becomes a real drag into another app.
+            if (Math.Abs(dy) > 44)
+            {
+                _reordering = false;
+                canvas?.EndReorder(this);
+                _startedDrag = true;
+                _cardHost.ReleaseMouseCapture();
+                StartDrag(e.GetPosition(_cardHost));
+                return;
+            }
+            canvas?.ReorderTo(this, p.X - _grabOffsetX);
+            return;
+        }
+
+        if (Math.Abs(dx) < 4 && Math.Abs(dy) < 4) return;
         EndPress();
+        if (canvas is not null && Math.Abs(dy) <= 44)
+        {
+            // Sliding along the line reorders the photos.
+            _reordering = true;
+            canvas.BeginReorder(this);
+            canvas.ReorderTo(this, p.X - _grabOffsetX);
+            return;
+        }
+        _startedDrag = true;
         _cardHost.ReleaseMouseCapture();
         StartDrag(e.GetPosition(_cardHost));
     }
@@ -415,9 +457,10 @@ public sealed class PeggedControl : Canvas
     private void OnMouseUp(object sender, MouseButtonEventArgs e)
     {
         e.Handled = true;
-        bool click = _downPoint is not null && !_startedDrag && !_didLongPress;
+        bool click = _downPoint is not null && !_startedDrag && !_didLongPress && !_reordering;
         EndPress();
         _cardHost.ReleaseMouseCapture();
+        if (_reordering) { _reordering = false; (Parent as LineCanvas)?.EndReorder(this); }
         if (click) _line.Copy(Item.Id);
         _downPoint = null;
         _didLongPress = false;
@@ -436,7 +479,9 @@ public sealed class PeggedControl : Canvas
     private ContextMenu BuildMenu()
     {
         var id = Item.Id;
-        var menu = new ContextMenu();
+        var menu = new ContextMenu { FlowDirection = Strings.Flow };
+        menu.Opened += (_, _) => _line.MenuOpen = true;
+        menu.Closed += (_, _) => _line.MenuOpen = false;
         bool inInbox = _line.IsInInbox(id);
         menu.Items.Add(MenuItemFor(Strings.Copy, () => _line.Copy(id)));
         menu.Items.Add(MenuItemFor(Strings.Open, () => _line.Open(id)));

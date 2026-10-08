@@ -16,7 +16,8 @@ public static class Program
         {
             var snapApp = new App();
             snapApp.InitializeComponent();
-            return Snapshot.Run(args);
+            try { return Snapshot.Run(args); }
+            catch (Exception e) { Core.Log.Error($"Snapshot failed: {e}"); return 1; }
         }
         using var mutex = new Mutex(true, @"Local\Clothesline.SingleInstance", out bool first);
         var signal = new EventWaitHandle(false, EventResetMode.AutoReset, @"Local\Clothesline.Toggle");

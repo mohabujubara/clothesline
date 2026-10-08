@@ -16,6 +16,9 @@ public sealed class LineCanvas : Canvas
     private readonly List<PeggedControl> _cards = new();
     private readonly Grid _rope;
     private readonly Path _ropeShadow, _ropeCore, _ropeHighlight;
+    private Path? _bowLeft, _bowRight;
+    private PeggedControl? _held;
+    private bool _ropeDrag;
     private readonly Border _hint;
     private readonly Tween _hintOpacity = new(0);
     private readonly TranslateTransform _reveal = new();
@@ -31,7 +34,7 @@ public sealed class LineCanvas : Canvas
     public LineCanvas(Line line)
     {
         _line = line;
-        Background = null;
+        Background = Brushes.Transparent;
         ClipToBounds = false;
         Height = Layout.PanelHeight;
         RenderTransform = _reveal;
@@ -41,8 +44,9 @@ public sealed class LineCanvas : Canvas
         // shadow, so it reads on light and dark backgrounds alike. It fades out at
         // both ends so it seems to come from beyond the screen.
         _ropeShadow = new Path { Stroke = Theme.Freeze(new SolidColorBrush(Theme.Gray(0, 0.22))), StrokeThickness = 1.4, Effect = new BlurEffect { Radius = 2.4 }, RenderTransform = new TranslateTransform(0, 1.2) };
-        _ropeCore = new Path { Stroke = Theme.Freeze(new SolidColorBrush(Theme.Gray(0.55))), StrokeThickness = 1.2 };
-        _ropeHighlight = new Path { Stroke = Theme.Freeze(new SolidColorBrush(Theme.Gray(1, 0.45))), StrokeThickness = 0.4, RenderTransform = new TranslateTransform(0, -0.35) };
+        _ropeCore = new Path { StrokeThickness = 1.6 };
+        _ropeHighlight = new Path { StrokeThickness = 0.5, RenderTransform = new TranslateTransform(0, -0.45) };
+        PaintRope();
         _rope = new Grid { IsHitTestVisible = false };
         _rope.Children.Add(_ropeShadow);
         _rope.Children.Add(_ropeCore);
@@ -85,16 +89,34 @@ public sealed class LineCanvas : Canvas
         _line.Gust += () => { foreach (var c in _cards) if (!c.Item.Falling) c.Breeze(); StartTicking(); };
         _line.StateChanged += () => { foreach (var c in _cards) c.StateChanged(); StartTicking(); };
         Theme.Changed += Repaint;
+        Pegs.LookChanged += Repaint;
+        Strings.LanguageChanged += Repaint;
+        MouseLeftButtonDown += OnRopeDown;
+        MouseLeftButtonUp += OnRopeUp;
+        LostMouseCapture += (_, _) => { if (_ropeDrag) { _ropeDrag = false; RopeDragEnded?.Invoke(); } };
         SizeChanged += (_, _) => Relayout(snap: true);
         Sync();
     }
 
     public IReadOnlyList<PeggedControl> Cards => _cards;
 
+    private void PaintRope()
+    {
+        var color = Pegs.Rope();
+        _ropeCore.Stroke = Theme.Freeze(new SolidColorBrush(color));
+        _ropeHighlight.Stroke = Theme.Freeze(new SolidColorBrush(Pegs.Lighten(color, 0.55)));
+        _ropeHighlight.Opacity = 0.7;
+    }
+
     private void Repaint()
     {
+        PaintRope();
+        if (_width > 0) DrawRope();
         _hint.Background = Theme.Freeze(new SolidColorBrush(Theme.HintFill));
         ((TextBlock)_hint.Child).Foreground = Theme.Freeze(new SolidColorBrush(Theme.Secondary));
+        ((TextBlock)_hint.Child).Text = Strings.Hint;
+        _hint.ToolTip = Strings.NewCaptureTip;
+        _hint.FlowDirection = Strings.Flow;
         // Cards are rebuilt with the new colours.
         foreach (var c in _cards.ToList()) Children.Remove(c);
         _cards.Clear();
@@ -180,7 +202,7 @@ public sealed class LineCanvas : Canvas
             bool fresh = double.IsNaN(GetTop(card));
             SetTop(card, ropeY - Layout.PinAbove);
             card.Height = Layout.PanelHeight - ropeY;
-            card.SetTargetX(x, snap || fresh);
+            if (card != _held) card.SetTargetX(x, snap || fresh);
         }
         double mid = _width / 2;
         _hint.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
@@ -199,6 +221,92 @@ public sealed class LineCanvas : Canvas
         _ropeShadow.Data = _ropeCore.Data = _ropeHighlight.Data = geo;
         _rope.Width = w;
         _rope.Height = Layout.PanelHeight;
+
+        // A bow near each end, where the cord is tied off.
+        if (_bowLeft is not null) { Children.Remove(_bowLeft); Children.Remove(_bowRight); _bowLeft = _bowRight = null; }
+        if (Settings.Current.Bows && w > 400)
+        {
+            var color = Pegs.Rope();
+            _bowLeft = Pegs.Bow(color, mirrored: false);
+            _bowRight = Pegs.Bow(color, mirrored: true);
+            double xl = w * 0.055, xr = w * 0.945;
+            SetLeft(_bowLeft, xl); SetTop(_bowLeft, Layout.RopeY(xl, w) + 1);
+            SetLeft(_bowRight, xr); SetTop(_bowRight, Layout.RopeY(xr, w) + 1);
+            Children.Add(_bowLeft); Children.Add(_bowRight);
+            SetZIndex(_bowLeft, 1); SetZIndex(_bowRight, 1);
+        }
+    }
+
+    // MARK: Reordering by hand
+
+    public void BeginReorder(PeggedControl card)
+    {
+        _held = card;
+        SetZIndex(card, 5);
+        card.SetHovering(true);
+        StartTicking();
+    }
+
+    /// <summary>The held card follows the pointer; the others make room.</summary>
+    public void ReorderTo(PeggedControl card, double centerX)
+    {
+        if (_held != card) return;
+        double half = Layout.CardWidth / 2;
+        card.SetTargetX(Math.Clamp(centerX, half, Math.Max(half, _width - half)), snap: true);
+        var live = _cards.Where(c => !c.Item.Falling).ToList();
+        int from = live.IndexOf(card);
+        if (from < 0) return;
+        // Which slot is the pointer over now? The nearest one.
+        int to = 0;
+        double best = double.MaxValue;
+        for (int i = 0; i < live.Count; i++)
+        {
+            double d = Math.Abs(centerX - Layout.X(i, live.Count, _width));
+            if (d < best) { best = d; to = i; }
+        }
+        if (to != from) _line.Move(card.Item.Id, to);
+        StartTicking();
+    }
+
+    public void EndReorder(PeggedControl card)
+    {
+        if (_held != card) return;
+        _held = null;
+        SetZIndex(card, 2);
+        Relayout(snap: false);
+        StartTicking();
+    }
+
+    // MARK: Moving the line itself
+
+    public event Action? RopeDragStarted;
+    public event Action? RopeDragEnded;
+    public bool RopeDragging => _ropeDrag;
+
+    /// <summary>Whether a canvas point lies on the rope, within a comfortable band, and not over a photo.</summary>
+    public bool IsOverRope(Point p)
+    {
+        if (_width <= 0 || p.X < 0 || p.X > _width) return false;
+        if (CardHitRects().Any(h => h.rect.Contains(p))) return false;
+        return Math.Abs(p.Y - Layout.RopeY(p.X, _width)) <= 9;
+    }
+
+    private void OnRopeDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (!IsOverRope(e.GetPosition(this))) return;
+        e.Handled = true;
+        _ropeDrag = true;
+        CaptureMouse();
+        RopeDragStarted?.Invoke();
+    }
+
+    private void OnRopeUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (!_ropeDrag) return;
+        e.Handled = true;
+        _ropeDrag = false;
+        ReleaseMouseCapture();
+        RopeDragEnded?.Invoke();
     }
 
     /// <summary>Where the pointer counts as being over a photo, in canvas coordinates.</summary>
@@ -233,6 +341,7 @@ public sealed class LineCanvas : Canvas
             if (c.Hovering != on) { c.SetHovering(on); any = true; }
         }
         if (any) StartTicking();
+        Cursor = pointInCanvas is { } q && over is null && IsOverRope(q) ? System.Windows.Input.Cursors.SizeNS : null;
     }
 
     /// <summary>Steps every animation forward without a window, for offscreen rendering.</summary>

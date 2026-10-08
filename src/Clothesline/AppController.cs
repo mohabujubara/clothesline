@@ -45,13 +45,18 @@ public sealed class AppController : IDisposable
     /// <summary>Captures that just hung from a file, so the clipboard copy of the same one is skipped.</summary>
     private readonly List<(DateTime when, int w, int h)> _recentFileCaptures = new();
 
-    private static readonly TimeSpan RevealDelay = TimeSpan.FromSeconds(0.25);
     private static readonly TimeSpan RetractDelay = TimeSpan.FromSeconds(0.5);
+    /// <summary>A click near the top edge means work in the window there, not a wish for the line. Stays set until the pointer leaves the edge.</summary>
+    private bool _edgeSuppressed;
+    private POINT _restingAt;
+    private bool _buttonWasDown;
 
     public AppController()
     {
         OleInitialize(IntPtr.Zero);
+        Theme.ApplySetting();
         Theme.Apply();
+        Strings.Refresh();
 
         _panel = new LineWindow(_line);
         _panel.PlaceOn();
@@ -167,7 +172,7 @@ public sealed class AppController : IDisposable
         }
         int pixels = (int)Math.Max(from.Width, from.Height);
         var image = Thumbnails.Load(item.Path, Math.Min(3000, Math.Max(400, pixels)), 2)?.Image ?? item.Thumb;
-        FlightWindow.Fly(image, from, to, item.Tilt, monitor, () => _line.Land(id));
+        FlightWindow.Fly(image, from, to, item.Tilt, monitor, Seed(item), () => _line.Land(id));
     }
 
     /// <summary>A discarded card falls over the whole screen, from where it hangs.</summary>
@@ -175,8 +180,10 @@ public sealed class AppController : IDisposable
     {
         if (!_isPresent || !_isRevealed || item.Flying || _panel.Display is null) return;
         if (CardFrame(item.Id) is not { } card) return;
-        FlightWindow.Fall(item.Thumb, card, item.Tilt, _panel.Display);
+        FlightWindow.Fall(item.Thumb, card, item.Tilt, _panel.Display, Seed(item));
     }
+
+    private static int Seed(Pegged item) => item.Path.Aggregate(17, (h, c) => h * 31 + c);
 
     /// <summary>Where a card hangs, in screen pixels, using the same layout as the canvas.</summary>
     private RECT? CardFrame(Guid id)
@@ -211,7 +218,7 @@ public sealed class AppController : IDisposable
             UpdateCapacity();
             _wanted = true;
             Refresh();
-            Reveal(peekFor: 2.5);
+            Reveal(peekFor: 2.5, reason: "new capture");
         }
         else if (live == 0 && !_keepOpen)
         {
@@ -250,9 +257,10 @@ public sealed class AppController : IDisposable
         Later(0.4, () => { if (!_isPresent) _panel.OrderOut(); });
     }
 
-    private void Reveal(bool pinned = false, double peekFor = 0)
+    private void Reveal(bool pinned = false, double peekFor = 0, string reason = "edge")
     {
         if (!_isPresent) return;
+        if (!_isRevealed) Log.Notice($"Reveal: {reason}");
         if (pinned) _pinned = true;
         if (peekFor > 0) _peekUntil = DateTime.Now.AddSeconds(peekFor);
         _awaySince = null;
@@ -291,7 +299,7 @@ public sealed class AppController : IDisposable
             _panel.PlaceOn();
             UpdateCapacity();
             Refresh();
-            Reveal(pinned: true);
+            Reveal(pinned: true, reason: "toggle");
         }
     }
 
@@ -301,12 +309,18 @@ public sealed class AppController : IDisposable
         _panel.Canvas.UpdateHover(null);
     }
 
+    private static bool ButtonDown() => (GetAsyncKeyState(0x01) < 0) || (GetAsyncKeyState(0x02) < 0) || (GetAsyncKeyState(0x04) < 0);
+
     private void Tick()
     {
         var mouse = Displays.Cursor();
         var now = DateTime.Now;
-        var monitorUnderPointer = Displays.Containing(mouse);
-        bool inHotBand = monitorUnderPointer is not null && monitorUnderPointer.HotBand.Contains(mouse);
+        var displayUnderPointer = Displays.Containing(mouse);
+        bool inHotBand = displayUnderPointer is not null && displayUnderPointer.HotBand.Contains(mouse);
+        bool buttonDown = ButtonDown();
+        bool justPressed = buttonDown && !_buttonWasDown;
+        _buttonWasDown = buttonDown;
+        if (!inHotBand) _edgeSuppressed = false;
 
         if (_isPresent && _panel.Display is { } current && FullScreen.IsActive(current))
         {
@@ -317,18 +331,28 @@ public sealed class AppController : IDisposable
 
         if (!_isRevealed)
         {
-            // Resting against the top edge brings the line down on that screen.
-            if (monitorUnderPointer is not null && inHotBand && !FullScreen.IsActive(monitorUnderPointer))
+            // The top edge is where every maximised window keeps its tabs, so the
+            // line only comes down when the pointer rests there, still, with no
+            // button pressed. A click up there says you are working, not asking.
+            if (buttonDown && inHotBand) _edgeSuppressed = true;
+            bool resting = Settings.Current.RevealAtTopEdge && displayUnderPointer is not null && inHotBand && !buttonDown
+                           && !_edgeSuppressed && !FullScreen.IsActive(displayUnderPointer);
+            if (resting)
             {
-                _hotZoneSince ??= now;
-                if (now - _hotZoneSince.Value >= RevealDelay)
+                if (_hotZoneSince is null || Math.Abs(mouse.X - _restingAt.X) > 6 || Math.Abs(mouse.Y - _restingAt.Y) > 6)
+                {
+                    _hotZoneSince = now;
+                    _restingAt = mouse;
+                }
+                if (now - _hotZoneSince.Value >= TimeSpan.FromSeconds(Math.Clamp(Settings.Current.RevealDelay, 0.15, 3)))
                 {
                     _hotZoneSince = null;
-                    if (_panel.Display is null || !_panel.Display.Equals(monitorUnderPointer))
+                    if (_panel.Display is null || !_panel.Display.Equals(displayUnderPointer))
                     {
-                        _panel.PlaceOn(monitorUnderPointer);
+                        _panel.PlaceOn(displayUnderPointer);
                         UpdateCapacity();
                     }
+                    _wanted = true;
                     Refresh();
                     Reveal();
                 }
@@ -341,8 +365,19 @@ public sealed class AppController : IDisposable
         }
 
         bool dragging = DragSource.IsDragging || _line.DraggingId is not null;
-        _panel.HoldMouse = dragging || _line.PressedId is not null;
-        _panel.Canvas.UpdateHover(dragging ? null : _panel.ToCanvas(mouse));
+        bool holding = _line.PressedId is not null || _panel.Canvas.RopeDragging || _panel.Canvas.Cards.Any(c => c.Reordering);
+        _panel.HoldMouse = dragging || holding;
+        var local = _panel.ToCanvas(mouse);
+        _panel.Canvas.UpdateHover(dragging ? null : local);
+
+        // A click that goes through the strip into the window underneath puts
+        // the line away at once: you are working there.
+        if (justPressed && !dragging && !holding && !_line.MenuOpen && !_panel.IsOverPhoto(mouse))
+        {
+            _edgeSuppressed = inHotBand;
+            SetRevealed(false);
+            return;
+        }
 
         // The line's zone runs from its lowest point up to the top of the screen, so moving up never hides it.
         var frame = _panel.Frame;
@@ -352,7 +387,7 @@ public sealed class AppController : IDisposable
         if (inside && _pinned) _pinned = false;
 
         bool pendingHold = Settings.Current.StayDownWhileUnused && _line.HasUnused;
-        bool busy = _pinned || dragging || _line.PressedId is not null || now < _peekUntil || pendingHold;
+        bool busy = _pinned || dragging || holding || _line.MenuOpen || now < _peekUntil || pendingHold;
         if (inside || busy)
         {
             _awaySince = null;
@@ -383,7 +418,7 @@ public sealed class AppController : IDisposable
         _keepOpen = true;
         _wanted = true;
         Refresh();
-        Reveal(pinned: true);
+        Reveal(pinned: true, reason: "welcome");
         _tray.Balloon(Strings.WelcomeTitle, string.Format(Strings.WelcomeBody, Settings.Current.HotKey));
         Later(6, () =>
         {
@@ -397,6 +432,11 @@ public sealed class AppController : IDisposable
     /// <summary>Settings changed: the shortcut, the folders and the clipboard watcher follow.</summary>
     public void ApplySettings()
     {
+        Theme.ApplySetting();
+        Strings.Refresh();
+        Pegs.RaiseLookChanged();
+        _tray.Repaint();
+        if (_panel.Display is { } d) _panel.PlaceOn(d);
         if (_hotKey is null || _hotKey.Text != Settings.Current.HotKey) RegisterHotKey();
         _clipboard.Enabled = Settings.Current.CatchClipboard;
         var wanted = new List<string> { Shell.ScreenshotsFolder(), Inbox.Folder };
@@ -409,7 +449,9 @@ public sealed class AppController : IDisposable
 
     private ContextMenu BuildMenu()
     {
-        var menu = new ContextMenu();
+        var menu = new ContextMenu { FlowDirection = Strings.Flow };
+        menu.Opened += (_, _) => _line.MenuOpen = true;
+        menu.Closed += (_, _) => _line.MenuOpen = false;
         menu.Items.Add(PeggedControl.MenuItemFor(_isRevealed ? Strings.HideLine : Strings.ShowLine, Toggle, Settings.Current.HotKey));
         var clear = PeggedControl.MenuItemFor(Strings.TakeEverythingDown, () => _line.Clear());
         clear.IsEnabled = _line.LiveCount > 0;
@@ -468,11 +510,10 @@ public sealed class AppController : IDisposable
         var version = typeof(AppController).Assembly.GetName().Version?.ToString(3) ?? "1.0";
         MessageBox.Show(
             $"{Strings.AppName} {version}\n{Strings.Tagline}\n\n" +
-            "Click a photo to copy it. Press and hold to edit it. Double click to open it.\n" +
-            "Drag it into an app to send a copy, into a folder to keep it, or to the Recycle Bin to let it go.\n" +
-            $"Push the pointer against the top edge of the screen, or press {Settings.Current.HotKey}, to bring the line down.\n\n" +
+            string.Format(Strings.AboutBody, Settings.Current.HotKey) + "\n\n" +
             $"Caught captures live in\n{Inbox.Folder}\n\nSettings: {Path.Combine(Settings.Folder, "settings.json")}",
-            Strings.About, MessageBoxButton.OK, MessageBoxImage.None);
+            Strings.About, MessageBoxButton.OK, MessageBoxImage.None, MessageBoxResult.OK,
+            Strings.IsRtl ? MessageBoxOptions.RtlReading | MessageBoxOptions.RightAlign : MessageBoxOptions.None);
     }
 
     private static void Later(double seconds, Action action)

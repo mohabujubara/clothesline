@@ -36,12 +36,15 @@ they land, sway in an occasional breeze, and fall off the screen when you let th
 | Click | Copy the image. Paste it anywhere, as a picture or as a file. |
 | Press and hold | Open it in your image editor (Paint, unless you changed it). The line shows the edited version when you save. |
 | Double click | Open it in Photos. |
+| Drag along the line | Reorder the photos. |
+| Drag the line itself | Move the whole line up or down the screen, below your tabs if you like. |
 | Drag into an app | Send a copy. It stays on the line. |
 | Drag into a folder | Keep it there. It leaves the line. |
 | Drag to the Recycle Bin, or click the cross | Let it go. |
 | Right click | Copy, copy the text in it, open, edit, show in Explorer, keep, save, discard. |
 | Hover | A small tooltip: file name, size, and how long it has been hanging. |
-| Push the pointer against the top edge | Bring the line down on that screen. If your taskbar is at the top, rest the pointer on it. |
+| Rest the pointer still at the top edge | Bring the line down on that screen, after half a second. A click up there means you are working, and the line stays away. If your taskbar is at the top, rest the pointer on it. |
+| Click through the line | Any click into the window underneath tucks the line away at once. |
 | <kbd>Ctrl</kbd>&thinsp;<kbd>Alt</kbd>&thinsp;<kbd>T</kbd> | Show or hide the line. Clicking the tray icon does the same. |
 
 <br>
@@ -84,10 +87,17 @@ comes up. The snip hangs the moment you let go.
 
 <br>
 
+## Your line, your way.
+
+A bronze cord with a bow at each end and wooden pegs with real springs, by default. In
+Settings you can pick another colour for the line, aluminium or coloured plastic pegs, light or
+dark or whatever Windows uses, and English or Arabic, laid out right to left.
+
 ## Settings, from the tray menu.
 
-Pick the shortcut by pressing it. Add the folders your other tools save to. Choose where
-caught captures go. Turn the options below on or off. Changes apply right away.
+Pick the shortcut by pressing it. Decide whether the top edge brings the line down at all, and
+how far from the top it hangs. Add the folders your other tools save to. Choose where caught
+captures go. Turn the options below on or off. Changes apply right away.
 
 | | |
 |:--|:--|
