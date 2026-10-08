@@ -24,6 +24,17 @@ public static class Program
             Core.Notes.Render(new Core.NoteData { Text = args[2], Color = "yellow" }, System.IO.Path.GetFullPath(args[1]));
             return 0;
         }
+        if (args.Length == 2 && args[0] is "--demo" or "--hero" or "--hero-dark")
+        {
+            var artApp = new App();
+            artApp.InitializeComponent();
+            try
+            {
+                return args[0] == "--demo" ? Demo.RunDemo(System.IO.Path.GetFullPath(args[1]))
+                     : Demo.RunHero(System.IO.Path.GetFullPath(args[1]), dark: args[0] == "--hero-dark");
+            }
+            catch (Exception e) { Core.Log.Error($"Art failed: {e}"); return 1; }
+        }
         if (args.Contains("--snapshot"))
         {
             var snapApp = new App();

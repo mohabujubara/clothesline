@@ -433,6 +433,9 @@ public sealed class LineCanvas : Canvas
         Cursor = pointInCanvas is { } q && over is null && IsOverRope(q) ? System.Windows.Input.Cursors.SizeNS : null;
     }
 
+    /// <summary>Lays the cards out again right now, snapping them into place. For offscreen rendering.</summary>
+    public void RelayoutNow() => Relayout(snap: true);
+
     /// <summary>Steps every animation forward without a window, for offscreen rendering.</summary>
     public void Advance(double seconds, double step = 1.0 / 60)
     {

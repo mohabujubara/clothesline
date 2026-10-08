@@ -13,9 +13,15 @@
 <br>
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/snap-dark.png">
-  <img src="docs/snap-light.png" alt="Three screenshots in glass frames hang from a thin sagging line at the top of the screen. The middle one shows a Copied badge.">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/hero-dark.png">
+  <img src="docs/hero-light.png" alt="Clothesline. Screenshots, hung out to dry. Three screenshots in glass frames hang from a bronze line with wooden pegs across the top of a Windows desktop.">
 </picture>
+
+<br>
+
+<p align="center">
+  <img src="docs/demo.gif" width="1000" alt="The pointer rests at the top edge and the line comes down. A screenshot flies onto it. A click copies it. A drag moves it along the line. The cross lets one fall. A sticky note hangs. The line tucks away.">
+</p>
 
 <br>
 
