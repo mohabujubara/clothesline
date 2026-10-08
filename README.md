@@ -110,7 +110,7 @@ Clothesline runs entirely on your PC, and your screenshots never leave it.
 | | |
 |:--|:--|
 | **Compatibility** | Windows 10 version 1809 or later, Windows 11. x64. Per‑monitor DPI aware, multi‑monitor, light and dark themes. |
-| **Size** | Under 1 MB with the .NET 8 Desktop Runtime installed, or a 63 MB portable build that needs nothing. |
+| **Size** | 25 MB with the .NET 8 Desktop Runtime installed, or a 69 MB portable build that needs nothing. Most of that is the Windows SDK projection the OCR needs. |
 | **Built with** | C#, WPF and Win32. Rendered on the DWM, with real spring physics. |
 | **Network access** | None |
 | **Price** | Free |
