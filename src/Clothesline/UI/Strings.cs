@@ -34,6 +34,24 @@ public static class Strings
 
     public const string Hint = "Take a screenshot and it will hang here";
     public const string Copied = "Copied";
+    public const string TextCopied = "Text copied";
+    public const string CopyText = "Copy text";
+    public const string KeepOnLine = "Keep on the line";
+    public const string NewCapture = "New capture";
+    public const string SettingsTitle = "Settings";
+    public const string SectionLine = "The line";
+    public const string SectionCaptures = "Captures";
+    public const string Shortcut = "Show or hide the line";
+    public const string ShortcutTip = "Click here and press the keys you want, like Ctrl+Alt+T";
+    public const string CaughtCapturesFolder = "Caught captures are saved to";
+    public const string Change = "Change2026";
+    public const string WatchFoldersLabel = "Folders watched for new screenshots";
+    public const string AddFolder = "Add folder2026";
+    public const string RemoveFolder = "Remove";
+    public const string SettingsFooter = "Changes apply right away. Everything lives in {0}.";
+    public const string NewCaptureTip = "Click to take a new screenshot (Win+Shift+S)";
+    public const string Settings = "Settings2026";
+    public const string JustNow = "just now";
 
     public const string WelcomeTitle = "Clothesline is on the line";
     public const string WelcomeBody = "Take a screenshot and it hangs at the top of the screen. Push the pointer against the top edge to bring the line down, or press {0}.";

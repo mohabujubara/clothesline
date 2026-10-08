@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO;
+using Clothesline.Core;
 using Microsoft.Win32;
 using static Clothesline.Interop.Native;
 
@@ -35,6 +36,13 @@ public static class Shell
     {
         try { Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{path}\"") { UseShellExecute = true }); }
         catch { }
+    }
+
+    /// <summary>Starts a new screen snip, the same as Win+Shift+S.</summary>
+    public static void Snip()
+    {
+        try { Process.Start(new ProcessStartInfo("explorer.exe", "ms-screenclip:") { UseShellExecute = true }); }
+        catch (Exception e) { Log.Error($"Could not start a snip: {e.Message}"); }
     }
 
     public static void OpenFolder(string path)

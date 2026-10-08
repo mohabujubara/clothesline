@@ -394,6 +394,17 @@ public sealed class AppController : IDisposable
         });
     }
 
+    /// <summary>Settings changed: the shortcut, the folders and the clipboard watcher follow.</summary>
+    public void ApplySettings()
+    {
+        if (_hotKey is null || _hotKey.Text != Settings.Current.HotKey) RegisterHotKey();
+        _clipboard.Enabled = Settings.Current.CatchClipboard;
+        var wanted = new List<string> { Shell.ScreenshotsFolder(), Inbox.Folder };
+        wanted.AddRange(Settings.Current.WatchFolders.Select(Environment.ExpandEnvironmentVariables));
+        var current = _watchers.Select(w => w.Folder).ToList();
+        if (!wanted.Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x => x).SequenceEqual(current.OrderBy(x => x), StringComparer.OrdinalIgnoreCase)) StartWatchers();
+    }
+
     // MARK: Menu
 
     private ContextMenu BuildMenu()
@@ -403,6 +414,7 @@ public sealed class AppController : IDisposable
         var clear = PeggedControl.MenuItemFor(Strings.TakeEverythingDown, () => _line.Clear());
         clear.IsEnabled = _line.LiveCount > 0;
         menu.Items.Add(clear);
+        menu.Items.Add(PeggedControl.MenuItemFor(Strings.NewCapture, Shell.Snip, "Win+Shift+S"));
         menu.Items.Add(new Separator());
 
         var catchItem = PeggedControl.MenuItemFor(Strings.CatchClipboard, () =>
@@ -445,6 +457,7 @@ public sealed class AppController : IDisposable
         login.IsChecked = Shell.StartsWithWindows;
         menu.Items.Add(login);
         menu.Items.Add(new Separator());
+        menu.Items.Add(PeggedControl.MenuItemFor(Strings.Settings, () => SettingsWindow.Open(ApplySettings)));
         menu.Items.Add(PeggedControl.MenuItemFor(Strings.About, ShowAbout));
         menu.Items.Add(PeggedControl.MenuItemFor(Strings.Quit, () => Application.Current.Shutdown()));
         return menu;

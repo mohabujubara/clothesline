@@ -5,6 +5,13 @@ public static class Program
     [STAThread]
     public static int Main(string[] args)
     {
+        if (args.Length == 3 && args[0] == "--ocr")
+        {
+            // Reads the text in an image into a file: for checking the OCR without a desktop.
+            var text = Core.Ocr.ReadAsync(System.IO.Path.GetFullPath(args[1])).GetAwaiter().GetResult();
+            System.IO.File.WriteAllText(args[2], text ?? "<ocr unavailable>");
+            return text is null ? 1 : 0;
+        }
         if (args.Contains("--snapshot"))
         {
             var snapApp = new App();

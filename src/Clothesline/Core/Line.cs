@@ -23,6 +23,9 @@ public sealed class Pegged
     public bool Flying { get; set; }
     /// <summary>Copied, dragged out, opened or edited at least once. Restored photos count as used.</summary>
     public bool Used { get; set; }
+    /// <summary>Kept on purpose: never pushed off by newer captures.</summary>
+    public bool Pinned { get; set; }
+    public DateTime HungAt { get; } = DateTime.Now;
 
     public Pegged(string path, Thumbnail thumb)
     {
@@ -57,6 +60,8 @@ public sealed class Line
 
     private Guid? _copiedId, _draggingId, _pressedId;
     public Guid? CopiedId { get => _copiedId; set { if (_copiedId != value) { _copiedId = value; StateChanged?.Invoke(); } } }
+    /// <summary>What the badge under the card says: "Copied", or "Text copied".</summary>
+    public string CopiedLabel { get; set; } = UI.Strings.Copied;
     public Guid? DraggingId { get => _draggingId; set { if (_draggingId != value) { _draggingId = value; StateChanged?.Invoke(); } } }
     public Guid? PressedId { get => _pressedId; set { if (_pressedId != value) { _pressedId = value; StateChanged?.Invoke(); } } }
 
@@ -97,8 +102,8 @@ public sealed class Line
         // A full line lets the oldest photo fall off the far end.
         while (LiveCount > MaxItems)
         {
-            var oldest = _items.FirstOrDefault(i => !i.Falling);
-            if (oldest is null) break;
+            var oldest = _items.FirstOrDefault(i => !i.Falling && !i.Pinned);
+            if (oldest is null) break; // everything left is kept on purpose
             Drop(oldest.Id, quietly: true);
         }
         Save();
@@ -156,6 +161,7 @@ public sealed class Line
         var item = Find(id);
         if (item is null) return;
         item.Used = true;
+        CopiedLabel = UI.Strings.Copied;
         try
         {
             var data = new DataObject();
@@ -268,6 +274,37 @@ public sealed class Line
         if (item is not null) Shell.ShowInExplorer(item.Path);
     }
 
+    /// <summary>Keeps a photo on the line: newer captures never push it off.</summary>
+    public void TogglePin(Guid id)
+    {
+        var item = Find(id);
+        if (item is null) return;
+        item.Pinned = !item.Pinned;
+        Save();
+        ItemUpdated?.Invoke(item);
+    }
+
+    /// <summary>Reads the text in the screenshot and puts it on the clipboard.</summary>
+    public async void CopyText(Guid id)
+    {
+        var item = Find(id);
+        if (item is null) return;
+        item.Used = true;
+        string? text;
+        try { text = await Ocr.ReadAsync(item.Path); }
+        catch (Exception e) { Log.Error($"OCR failed: {e.Message}"); text = null; }
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            System.Media.SystemSounds.Beep.Play();
+            return;
+        }
+        try { Clipboard.SetText(text); }
+        catch (Exception e) { Log.Error($"Could not copy text: {e.Message}"); return; }
+        CopiedLabel = UI.Strings.TextCopied;
+        CopiedId = id;
+        Later(1.4, () => { if (CopiedId == id) CopiedId = null; });
+    }
+
     // MARK: Breeze
 
     /// <summary>Every so often a little wind moves the line. It is what makes it feel like an object and not a widget.</summary>
@@ -286,13 +323,18 @@ public sealed class Line
     {
         if (!_persist) return;
         Settings.Current.Pegged = _items.Where(i => !i.Falling).Select(i => i.Path).ToList();
+        Settings.Current.PinnedPaths = _items.Where(i => !i.Falling && i.Pinned).Select(i => i.Path).ToList();
         Settings.Current.Save();
     }
 
     private void Restore()
     {
         foreach (var path in Settings.Current.Pegged.ToList())
-            if (File.Exists(path) && Hang(path, quietly: true) is { } id && Find(id) is { } item) item.Used = true;
+            if (File.Exists(path) && Hang(path, quietly: true) is { } id && Find(id) is { } item)
+            {
+                item.Used = true;
+                item.Pinned = Settings.Current.PinnedPaths.Contains(path, StringComparer.OrdinalIgnoreCase);
+            }
     }
 
     private void Later(double seconds, Action action)

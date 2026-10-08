@@ -94,7 +94,7 @@ public sealed class LineWindow : Window
         if (p is null) return false;
         foreach (var (_, rect) in Canvas.HitRects())
             if (rect.Contains(p.Value)) return true;
-        return false;
+        return Canvas.HintRect is { } hint && hint.Contains(p.Value);
     }
 
     /// <summary>The line hangs on the screen you are using, under the taskbar if it is at the top.</summary>

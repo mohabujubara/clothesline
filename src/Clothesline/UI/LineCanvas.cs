@@ -71,9 +71,12 @@ public sealed class LineCanvas : Canvas
             BorderThickness = new Thickness(0.75),
             BorderBrush = Theme.Freeze(new LinearGradientBrush(Theme.GlassEdgeTop, Theme.GlassEdgeBottom, 90)),
             Effect = new DropShadowEffect { BlurRadius = 14, ShadowDepth = 3, Direction = 270, Opacity = 0.14, Color = Colors.Black },
-            IsHitTestVisible = false,
             Opacity = 0,
+            Cursor = System.Windows.Input.Cursors.Hand,
+            ToolTip = Strings.NewCaptureTip,
         };
+        // The hint is a button too: click it to start a snip.
+        _hint.MouseLeftButtonUp += (_, e) => { e.Handled = true; Clothesline.Interop.Shell.Snip(); };
         Children.Add(_hint);
         SetZIndex(_hint, 1);
 
@@ -199,7 +202,14 @@ public sealed class LineCanvas : Canvas
     }
 
     /// <summary>Where the pointer counts as being over a photo, in canvas coordinates.</summary>
-    public IEnumerable<(PeggedControl card, Rect rect)> HitRects()
+    public IEnumerable<(PeggedControl card, Rect rect)> HitRects() => CardHitRects();
+
+    /// <summary>The hint counts as well while the line is empty, so it can be clicked.</summary>
+    public Rect? HintRect => _line.LiveCount == 0 && _hint.Opacity > 0.5
+        ? new Rect(GetLeft(_hint), GetTop(_hint), _hint.ActualWidth, _hint.ActualHeight)
+        : null;
+
+    private IEnumerable<(PeggedControl card, Rect rect)> CardHitRects()
     {
         foreach (var c in _cards)
         {
@@ -214,7 +224,7 @@ public sealed class LineCanvas : Canvas
     {
         PeggedControl? over = null;
         if (pointInCanvas is { } p)
-            foreach (var (card, rect) in HitRects())
+            foreach (var (card, rect) in CardHitRects())
                 if (rect.Contains(p)) { over = card; break; }
         bool any = false;
         foreach (var c in _cards)

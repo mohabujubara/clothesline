@@ -46,6 +46,10 @@ public sealed class PeggedControl : Canvas
     private readonly Border _copied;
     private readonly TranslateTransform _copiedTranslate = new();
     private readonly DropShadowEffect _shadowEffect;
+    private readonly Grid _pin;
+    private readonly TextBlock _copiedText;
+    private readonly TextBlock _tipName = new();
+    private readonly TextBlock _tipMeta = new();
     private Size _cardSize;
 
     // Input
@@ -134,12 +138,13 @@ public sealed class PeggedControl : Canvas
         // "Copied", under the card.
         var copiedRow = new StackPanel { Orientation = Orientation.Horizontal };
         copiedRow.Children.Add(Glass.Check(10, Theme.Freeze(new SolidColorBrush(Theme.Primary))));
-        copiedRow.Children.Add(new TextBlock
+        _copiedText = new TextBlock
         {
             Text = Strings.Copied, Margin = new Thickness(6, 0, 0, 0),
             FontFamily = new FontFamily("Segoe UI Variable Text, Segoe UI"), FontSize = 11, FontWeight = FontWeights.SemiBold,
             Foreground = Theme.Freeze(new SolidColorBrush(Theme.Primary)), VerticalAlignment = VerticalAlignment.Center,
-        });
+        };
+        copiedRow.Children.Add(_copiedText);
         _copied = new Border
         {
             Child = copiedRow, Padding = new Thickness(10, 5, 10, 5), CornerRadius = new CornerRadius(12),
@@ -150,10 +155,25 @@ public sealed class PeggedControl : Canvas
 
         Children.Add(_cardHost);
         Children.Add(_copied);
-        var pin = Glass.Clothespin();
-        Children.Add(pin);
-        SetLeft(pin, (Layout.CardWidth - Layout.PinWidth) / 2);
-        SetTop(pin, 0);
+        _pin = Glass.Clothespin();
+        Children.Add(_pin);
+        SetLeft(_pin, (Layout.CardWidth - Layout.PinWidth) / 2);
+        SetTop(_pin, 0);
+        PaintPin();
+
+        // A quiet tooltip: the file, its size and how long it has been hanging.
+        var tip = new StackPanel();
+        _tipName.FontWeight = FontWeights.SemiBold;
+        _tipMeta.Opacity = 0.7;
+        _tipMeta.Margin = new Thickness(0, 2, 0, 0);
+        tip.Children.Add(_tipName);
+        tip.Children.Add(_tipMeta);
+        var toolTip = new ToolTip { Content = tip };
+        toolTip.Opened += (_, _) => RefreshTip();
+        ToolTipService.SetInitialShowDelay(_cardHost, 900);
+        ToolTipService.SetShowDuration(_cardHost, 6000);
+        ToolTipService.SetPlacement(_cardHost, System.Windows.Controls.Primitives.PlacementMode.Bottom);
+        _cardHost.ToolTip = toolTip;
         SetLeft(_cardHost, (Layout.CardWidth - _cardSize.Width) / 2);
         SetTop(_cardHost, Layout.CardOffsetBelowTop);
         PlaceCopied();
@@ -197,6 +217,7 @@ public sealed class PeggedControl : Canvas
     public void Refresh()
     {
         _image.Source = Item.Thumb;
+        PaintPin();
         var size = Layout.CardSize(Item.PixelWidth, Item.PixelHeight);
         if (size != _cardSize)
         {
@@ -208,6 +229,26 @@ public sealed class PeggedControl : Canvas
         }
         ApplyPhotoClip();
         if (!Item.Flying) Nudge(2.2);
+    }
+
+    private void PaintPin()
+    {
+        ((Border)_pin.Children[0]).Background = Item.Pinned ? Glass.BrassBrush() : Glass.MetalBrush();
+    }
+
+    private void RefreshTip()
+    {
+        _tipName.Text = System.IO.Path.GetFileName(Item.Path);
+        _tipMeta.Text = $"{Item.PixelWidth} 00d7 {Item.PixelHeight}  00b7  {Age(Item.HungAt)}{(Item.Pinned ? "  00b7  " + Strings.KeepOnLine : "")}";
+    }
+
+    private static string Age(DateTime when)
+    {
+        var span = DateTime.Now - when;
+        if (span.TotalSeconds < 45) return Strings.JustNow;
+        if (span.TotalMinutes < 60) return $"{(int)span.TotalMinutes} min ago";
+        if (span.TotalHours < 24) return $"{(int)span.TotalHours} h ago";
+        return when.ToString("d MMM HH:mm");
     }
 
     // MARK: Layout on the line
@@ -290,6 +331,7 @@ public sealed class PeggedControl : Canvas
     public void StateChanged()
     {
         bool copied = _line.CopiedId == Item.Id;
+        if (copied) _copiedText.Text = _line.CopiedLabel;
         bool dragging = _line.DraggingId == Item.Id;
         if (copied && _copiedOpacity.Target < 1) { _copiedOpacity.Go(1, 0.2); _copiedOffset.Go(0, 0.2); Nudge(3); }
         if (!copied && _copiedOpacity.Target > 0) { _copiedOpacity.Go(0, 0.2); _copiedOffset.Go(-4, 0.2); }
@@ -399,7 +441,11 @@ public sealed class PeggedControl : Canvas
         menu.Items.Add(MenuItemFor(Strings.Copy, () => _line.Copy(id)));
         menu.Items.Add(MenuItemFor(Strings.Open, () => _line.Open(id)));
         menu.Items.Add(MenuItemFor(Strings.Edit, () => _line.Edit(id)));
+        if (Ocr.Available) menu.Items.Add(MenuItemFor(Strings.CopyText, () => _line.CopyText(id)));
         menu.Items.Add(MenuItemFor(Strings.ShowInExplorer, () => _line.Reveal(id)));
+        var keep = MenuItemFor(Strings.KeepOnLine, () => _line.TogglePin(id));
+        keep.IsChecked = Item.Pinned;
+        menu.Items.Add(keep);
         if (inInbox)
         {
             menu.Items.Add(MenuItemFor(Strings.SaveToDesktop, () => _line.SaveToDesktop(id)));

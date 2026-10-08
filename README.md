@@ -39,7 +39,8 @@ they land, sway in an occasional breeze, and fall off the screen when you let th
 | Drag into an app | Send a copy. It stays on the line. |
 | Drag into a folder | Keep it there. It leaves the line. |
 | Drag to the Recycle Bin, or click the cross | Let it go. |
-| Right click | Copy, open, edit, show in Explorer, save, discard. |
+| Right click | Copy, copy the text in it, open, edit, show in Explorer, keep, save, discard. |
+| Hover | A small tooltip: file name, size, and how long it has been hanging. |
 | Push the pointer against the top edge | Bring the line down on that screen. If your taskbar is at the top, rest the pointer on it. |
 | <kbd>Ctrl</kbd>&thinsp;<kbd>Alt</kbd>&thinsp;<kbd>T</kbd> | Show or hide the line. Clicking the tray icon does the same. |
 
@@ -63,7 +64,30 @@ Using ShareX, Greenshot or something else? Add its folder to `watchFolders` in t
 
 <br>
 
-## Two ways to work, from the tray menu.
+## Read the words off a screenshot.
+
+*Copy text* in the right-click menu reads whatever is written in the capture with the OCR built into
+Windows and puts it on the clipboard. An error message, a code, an address in a video call: no
+retyping. Nothing leaves your PC; it is the same engine the Snipping Tool uses, in the languages
+you have installed.
+
+<br>
+
+## Keep the ones that matter.
+
+The line holds as many photos as fit across your screen, and the oldest falls off the far end
+when a new one arrives. *Keep on the line* gives a photo a brass clip and a permanent place:
+newer captures never push it off.
+
+Empty line? Click the hint, or *New capture* in the tray menu, and the Windows snipping overlay
+comes up. The snip hangs the moment you let go.
+
+<br>
+
+## Settings, from the tray menu.
+
+Pick the shortcut by pressing it. Add the folders your other tools save to. Choose where
+caught captures go. Turn the options below on or off. Changes apply right away.
 
 | | |
 |:--|:--|

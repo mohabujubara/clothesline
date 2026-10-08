@@ -16,6 +16,7 @@ public sealed class Settings
 
     /// <summary>Files hanging on the line, oldest first.</summary>
     public List<string> Pegged { get; set; } = new();
+    public List<string> PinnedPaths { get; set; } = new();
     public bool SoundOn { get; set; } = true;
     public bool CatchClipboard { get; set; } = true;
     /// <summary>Keep the line down while a capture has not been used yet.</summary>

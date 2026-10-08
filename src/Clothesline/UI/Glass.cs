@@ -52,8 +52,20 @@ public static class Glass
         return g;
     }
 
+    /// <summary>A warmer metal for a clip that keeps its photo on the line.</summary>
+    public static Brush BrassBrush()
+    {
+        var g = new LinearGradientBrush { StartPoint = new Point(0, 0.5), EndPoint = new Point(1, 0.5) };
+        g.GradientStops.Add(new GradientStop(Theme.Rgba(0.72, 0.56, 0.22, 1), 0));
+        g.GradientStops.Add(new GradientStop(Theme.Rgba(0.98, 0.88, 0.55, 1), 0.35));
+        g.GradientStops.Add(new GradientStop(Theme.Rgba(0.88, 0.74, 0.38, 1), 0.65));
+        g.GradientStops.Add(new GradientStop(Theme.Rgba(0.62, 0.46, 0.16, 1), 1));
+        g.Freeze();
+        return g;
+    }
+
     /// <summary>A minimal aluminium clip: a brushed metal pill with a slot where it grips the line.</summary>
-    public static FrameworkElement Clothespin()
+    public static Grid Clothespin()
     {
         var pin = new Grid { Width = Layout.PinWidth, Height = Layout.PinHeight, IsHitTestVisible = false };
         var body = new Border
