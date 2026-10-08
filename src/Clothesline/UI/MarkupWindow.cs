@@ -75,8 +75,7 @@ public sealed class MarkupWindow : Window
         Title = $"{System.IO.Path.GetFileName(path)} · {Strings.MarkUp}";
         WindowStyle = WindowStyle.None;
         ResizeMode = ResizeMode.NoResize;
-        AllowsTransparency = true;
-        Background = Brushes.Transparent;
+        AllowsTransparency = false;
         ShowInTaskbar = true;
         Topmost = true;
         FlowDirection = Strings.Flow;
@@ -95,16 +94,14 @@ public sealed class MarkupWindow : Window
         bool dark = Theme.AppsDark;
         var chrome = new Border
         {
-            CornerRadius = new CornerRadius(12),
             Background = new SolidColorBrush(dark ? Color.FromRgb(0x20, 0x20, 0x22) : Color.FromRgb(0xF4, 0xF4, 0xF6)),
             BorderBrush = new SolidColorBrush(dark ? Theme.Gray(1, 0.12) : Theme.Gray(0, 0.14)),
             BorderThickness = new Thickness(1),
-            Margin = new Thickness(24),
-            Effect = new DropShadowEffect { BlurRadius = 40, ShadowDepth = 10, Direction = 270, Opacity = 0.35, Color = Colors.Black },
         };
         var root = new DockPanel();
         chrome.Child = root;
         Content = chrome;
+        Background = chrome.Background;
         Foreground = new SolidColorBrush(dark ? Theme.Gray(0.95) : Theme.Gray(0.12));
 
         var toolbar = BuildToolbar(dark);
@@ -115,9 +112,8 @@ public sealed class MarkupWindow : Window
         _page = new Grid { Width = imgW, Height = imgH, Margin = new Thickness(12, 4, 12, 12), ClipToBounds = true };
         _page.Children.Add(new Border
         {
-            Child = new Image { Source = _image, Stretch = Stretch.Fill },
-            CornerRadius = new CornerRadius(6),
-            Effect = new DropShadowEffect { BlurRadius = 14, ShadowDepth = 2, Direction = 270, Opacity = 0.25, Color = Colors.Black },
+            Child = Fast(new Image { Source = _image, Stretch = Stretch.Fill }),
+            BorderBrush = new SolidColorBrush(Theme.Gray(dark ? 1 : 0, 0.18)), BorderThickness = new Thickness(1),
         });
         _ink = new InkCanvas { Background = Brushes.Transparent, EditingMode = InkCanvasEditingMode.Ink, Cursor = Cursors.Pen };
         _ink.StrokeCollected += (_, e) => Commit(e.Stroke);
@@ -126,7 +122,7 @@ public sealed class MarkupWindow : Window
         _page.Children.Add(_shapes);
         root.Children.Add(new Viewbox { Child = _page, Stretch = Stretch.None, HorizontalAlignment = HorizontalAlignment.Center });
 
-        Width = imgW + 24 + 48; Height = imgH + 16 + 48 + 48;
+        Width = imgW + 26; Height = imgH + 18 + 48;
         WindowStartupLocation = WindowStartupLocation.Manual;
         var work = display.Work;
         Left = (work.Left + (work.Width - Width * display.Scale) / 2) / display.Scale;
@@ -145,6 +141,16 @@ public sealed class MarkupWindow : Window
         base.OnSourceInitialized(e);
         var hwnd = new WindowInteropHelper(this).Handle;
         FullScreen.Own.Add(hwnd);
+        // Rounded corners and a shadow from the DWM, which costs nothing per frame.
+        int round = Native.DWMWCP_ROUND;
+        Native.DwmSetWindowAttribute(hwnd, Native.DWMWA_WINDOW_CORNER_PREFERENCE, ref round, sizeof(int));
+    }
+
+    private static Image Fast(Image image)
+    {
+        RenderOptions.SetBitmapScalingMode(image, BitmapScalingMode.Linear);
+        RenderOptions.SetCachingHint(image, CachingHint.Cache);
+        return image;
     }
 
     // MARK: Toolbar
