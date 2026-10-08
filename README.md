@@ -120,17 +120,22 @@ Clothesline runs entirely on your PC, and your screenshots never leave it.
 
 ## Install
 
-Download `Clothesline.exe` from the latest release and run it. It lives in the notification
-area; choose *Start with Windows* from its menu to keep it around. The small build needs the
-[.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0); the portable build
-does not.
+1. Download **Clothesline-portable.exe** from the [latest release](https://github.com/mohabujubara/clothesline/releases/latest).
+2. Put it anywhere you like and run it. It lives in the notification area, next to the clock.
+3. Right click its icon and choose *Start with Windows* to keep it around.
+
+The first time, SmartScreen may say "Windows protected your PC" because the app is not
+code-signed yet. Click *More info*, then *Run anyway*.
+
+There is also a much smaller build, `Clothesline.exe`, for PCs that already have the
+[.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0).
 
 <br>
 
 ## Build from source
 
 ```powershell
-git clone <this repository>
+git clone https://github.com/mohabujubara/clothesline.git
 cd clothesline
 scripts\build.ps1            # dist\win-x64\Clothesline.exe, needs the .NET 8 Desktop Runtime
 scripts\build.ps1 -Portable  # dist\portable\Clothesline.exe, self-contained

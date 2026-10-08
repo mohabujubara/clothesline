@@ -1,0 +1,54 @@
+# Builds on every push and pull request. Pushing a tag like v1.2.0 also
+# publishes a GitHub release with both executables attached.
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Build
+        shell: pwsh
+        run: |
+          scripts/build.ps1
+          scripts/build.ps1 -Portable
+
+      - name: Name the files
+        shell: pwsh
+        run: |
+          $v = if ($env:GITHUB_REF -like 'refs/tags/v*') { $env:GITHUB_REF.Substring(11) } else { 'dev' }
+          New-Item -ItemType Directory -Force out | Out-Null
+          Copy-Item dist/portable/Clothesline.exe "out/Clothesline-$v-portable.exe"
+          Copy-Item dist/win-x64/Clothesline.exe "out/Clothesline-$v.exe"
+          Get-ChildItem out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Clothesline
+          path: out/*.exe
+
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: out/*.exe
+          generate_release_notes: true
+          body: |
+            **Clothesline-*-portable.exe** runs on any Windows 10 or 11 PC. Nothing to install.
+            **Clothesline-*.exe** is the small build and needs the [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0).
+
+            The app is not code-signed yet, so SmartScreen may show "Windows protected your PC" the first time. Click *More info*, then *Run anyway*.
