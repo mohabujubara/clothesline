@@ -179,7 +179,10 @@ public sealed class Line
     public void Prune()
     {
         foreach (var item in _items.Where(i => !i.Falling && !File.Exists(i.Path)).ToList())
+        {
+            Notes.Forget(item.Path);
             Drop(item.Id, quietly: true);
+        }
     }
 
     // MARK: Actions on one photo
@@ -201,6 +204,7 @@ public sealed class Line
                 if (full is not null) data.SetImage(full.Value.Image);
             }
             data.SetFileDropList(new System.Collections.Specialized.StringCollection { item.Path });
+            if (Notes.Get(item.Path) is { } note && !string.IsNullOrWhiteSpace(note.Text)) data.SetText(note.Text);
             Clipboard.SetDataObject(data, true);
         }
         catch (Exception e)
@@ -221,13 +225,41 @@ public sealed class Line
         if (!Shell.Open(item.Path)) System.Media.SystemSounds.Beep.Play();
     }
 
+    /// <summary>A new sticky note hangs on the line, ready to be written on.</summary>
+    public Guid? NewNote(string color = "yellow")
+    {
+        var path = Notes.Create(color);
+        var id = Hang(path);
+        if (id is not null) UI.NoteWindow.Show(path, this);
+        return id;
+    }
+
+    public bool IsNote(Guid id) => Find(id) is { } item && Notes.IsNote(item.Path);
+
+    public void EditNote(Guid id)
+    {
+        var item = Find(id);
+        if (item is null || !Notes.IsNote(item.Path)) return;
+        item.Used = true;
+        UI.NoteWindow.Show(item.Path, this);
+    }
+
+    public void RecolourNote(Guid id, string color)
+    {
+        var item = Find(id);
+        if (item is null || Notes.Get(item.Path) is not { } data) return;
+        Notes.Update(item.Path, data.Text, color);
+        ReloadThumbnail(item.Path);
+    }
+
     /// <summary>Press and hold: the photo opens enlarged with a pen. Every mark is saved into the file.</summary>
     public void Edit(Guid id)
     {
         var item = Find(id);
         if (item is null) return;
         item.Used = true;
-        UI.MarkupWindow.Show(item.Path, this);
+        if (Notes.IsNote(item.Path)) UI.NoteWindow.Show(item.Path, this);
+        else UI.MarkupWindow.Show(item.Path, this);
     }
 
     /// <summary>Open the photo in Paint, or whatever edits images on this PC.</summary>
@@ -258,6 +290,7 @@ public sealed class Line
             return;
         }
         Log.Notice($"Recycled {Path.GetFileName(item.Path)}");
+        Notes.Forget(item.Path);
         Sounds.PlayWhoosh();
         Drop(id, quietly: true);
     }

@@ -1,6 +1,7 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using System.Windows.Threading;
 using Clothesline.Core;
 using Clothesline.Interop;
@@ -457,6 +458,15 @@ public sealed class AppController : IDisposable
         clear.IsEnabled = _line.LiveCount > 0;
         menu.Items.Add(clear);
         menu.Items.Add(PeggedControl.MenuItemFor(Strings.NewCapture, Shell.Snip, "Win+Shift+S"));
+        var note = new MenuItem { Header = Strings.NewNote };
+        foreach (var key in Notes.Colors)
+        {
+            var k = key;
+            var item = new MenuItem { Header = Strings.NoteName(k), Icon = new System.Windows.Shapes.Ellipse { Width = 12, Height = 12, Fill = new SolidColorBrush(Notes.Paper(k)) } };
+            item.Click += (_, _) => { _keepOpen = true; _wanted = true; _panel.PlaceOn(); UpdateCapacity(); Refresh(); _line.NewNote(k); Reveal(pinned: true, reason: "note"); };
+            note.Items.Add(item);
+        }
+        menu.Items.Add(note);
         menu.Items.Add(new Separator());
 
         var catchItem = PeggedControl.MenuItemFor(Strings.CatchClipboard, () =>

@@ -18,6 +18,12 @@ public static class Program
             testApp.InitializeComponent();
             return testApp.Run();
         }
+        if (args.Length == 3 && args[0] == "--note-test")
+        {
+            // Draws a sticky note into a PNG: for checking the paper without a desktop.
+            Core.Notes.Render(new Core.NoteData { Text = args[2], Color = "yellow" }, System.IO.Path.GetFullPath(args[1]));
+            return 0;
+        }
         if (args.Contains("--snapshot"))
         {
             var snapApp = new App();

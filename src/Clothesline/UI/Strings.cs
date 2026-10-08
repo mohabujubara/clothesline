@@ -69,6 +69,13 @@ public static class Strings
     public static string Circle => L("Circle");
     public static string Box => L("Box");
     public static string Arrow => L("Arrow");
+    public static string TextTool => L("Text");
+    public static string Blur => L("Blur");
+    public static string NewNote => L("New note");
+    public static string EditNote => L("Edit note");
+    public static string NoteColour => L("Note colour");
+    public static string NotePlaceholder => L("Write a note2026");
+    public static string NoteName(string key) => L(key switch { "yellow" => "Yellow", "pink" => "Pink", "blue" => "Blue", "green" => "Green", "orange" => "Orange", _ => key });
     public static string Colour => L("Colour");
     public static string Thickness => L("Thickness");
     public static string Undo => L("Undo");
@@ -174,6 +181,13 @@ public static class Strings
         ["Circle"] = "دائرة",
         ["Box"] = "مربع",
         ["Arrow"] = "سهم",
+        ["Text"] = "نص",
+        ["Blur"] = "تمويه",
+        ["New note"] = "ملاحظة جديدة",
+        ["Edit note"] = "تحرير الملاحظة",
+        ["Note colour"] = "لون الملاحظة",
+        ["Write a note…"] = "اكتب ملاحظة…",
+        ["Yellow"] = "أصفر", ["Orange"] = "برتقالي",
         ["Colour"] = "اللون",
         ["Thickness"] = "السُّمك",
         ["Undo"] = "تراجع",

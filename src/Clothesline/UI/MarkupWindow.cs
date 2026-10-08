@@ -38,7 +38,7 @@ public sealed class MarkupWindow : Window
         w.Activate();
     }
 
-    private enum Tool { Pen, Highlighter, Circle, Box, Arrow }
+    private enum Tool { Pen, Highlighter, Circle, Box, Arrow, Text, Blur }
 
     private readonly string _path;
     private readonly Line _line;
@@ -171,6 +171,8 @@ public sealed class MarkupWindow : Window
         AddTool(Tool.Circle, "M9,3 A6,6 0 1 1 8.9,3", Strings.Circle);
         AddTool(Tool.Box, "M3,4 H15 V14 H3 Z", Strings.Box);
         AddTool(Tool.Arrow, "M3,15 L15,3 M9,3 H15 V9", Strings.Arrow);
+        AddTool(Tool.Text, "M3,4 H15 M9,4 V15 M6,15 H12", Strings.TextTool);
+        AddTool(Tool.Blur, "M3,3 H15 V15 H3 Z M3,7 H15 M3,11 H15 M7,3 V15 M11,3 V15", Strings.Blur);
         bar.Children.Add(Gap());
 
         for (int i = 0; i < Palette.Length; i++)
@@ -326,7 +328,8 @@ public sealed class MarkupWindow : Window
         bool inking = _tool is Tool.Pen or Tool.Highlighter;
         _ink.EditingMode = inking ? InkCanvasEditingMode.Ink : InkCanvasEditingMode.None;
         _shapes.IsHitTestVisible = !inking;
-        _shapes.Cursor = Cursors.Cross;
+        _shapes.Cursor = _tool == Tool.Text ? Cursors.IBeam : Cursors.Cross;
+        if (_tool != Tool.Text) CommitText();
         bool hi = _tool == Tool.Highlighter;
         _ink.DefaultDrawingAttributes = new DrawingAttributes
         {
@@ -344,6 +347,7 @@ public sealed class MarkupWindow : Window
 
     private void OnKey(object sender, KeyEventArgs e)
     {
+        if (_textEntry is not null && _textEntry.IsKeyboardFocused) return;
         bool ctrl = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
         if (e.Key == Key.Escape) { Close(); return; }
         if (ctrl && e.Key == Key.Z) { Undo(); return; }
@@ -357,6 +361,8 @@ public sealed class MarkupWindow : Window
             case Key.C: _tool = Tool.Circle; break;
             case Key.B: case Key.R: _tool = Tool.Box; break;
             case Key.A: _tool = Tool.Arrow; break;
+            case Key.T: _tool = Tool.Text; break;
+            case Key.X: _tool = Tool.Blur; break;
             case Key.D1: _size = 0; break;
             case Key.D2: _size = 1; break;
             case Key.D3: _size = 2; break;
@@ -416,7 +422,9 @@ public sealed class MarkupWindow : Window
             if (!File.Exists(BackupPath)) File.Copy(_path, BackupPath);
 
             int pw = _image.PixelWidth, ph = _image.PixelHeight;
+            CommitText();
             var visual = new DrawingVisual();
+            RenderOptions.SetBitmapScalingMode(visual, BitmapScalingMode.NearestNeighbor);
             using (var dc = visual.RenderOpen())
             {
                 dc.DrawImage(_image, new Rect(0, 0, pw, ph));
@@ -508,9 +516,78 @@ public sealed class MarkupWindow : Window
 
     // MARK: Shapes
 
-    private sealed record ShapeMark(Tool Kind, Point From, Point To, Color Color, double Thickness);
+    private sealed record ShapeMark(Tool Kind, Point From, Point To, Color Color, double Thickness, string? Text = null);
 
-    /// <summary>Circles, boxes and arrows, drawn by dragging. They live here, above the ink.</summary>
+    private static double FontSizeFor(double thickness) => thickness * 4.5 + 6;
+
+    // MARK: Text
+
+    private TextBox? _textEntry;
+
+    /// <summary>A click with the text tool: type where you clicked, Enter to keep it, Esc to drop it.</summary>
+    private void BeginText(Point at)
+    {
+        CommitText();
+        var box = new TextBox
+        {
+            MinWidth = 60, AcceptsReturn = true, TextWrapping = TextWrapping.NoWrap,
+            Background = new SolidColorBrush(Color.FromArgb(0x30, 0xFF, 0xFF, 0xFF)),
+            BorderBrush = new SolidColorBrush(Color.FromArgb(0x80, 0x1E, 0x66, 0xE5)), BorderThickness = new Thickness(1),
+            Foreground = new SolidColorBrush(_color), FontSize = FontSizeFor(Thickness), FontWeight = FontWeights.SemiBold,
+            FontFamily = new FontFamily("Segoe UI"), Padding = new Thickness(2, 0, 2, 0),
+            HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top,
+            Margin = new Thickness(at.X - 3, at.Y - FontSizeFor(Thickness) * 0.7, 0, 0),
+            Tag = at,
+        };
+        box.PreviewKeyDown += (_, e) =>
+        {
+            if (e.Key == Key.Escape) { e.Handled = true; DropText(); }
+            else if (e.Key == Key.Enter && !Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)) { e.Handled = true; CommitText(); }
+        };
+        box.LostKeyboardFocus += (_, _) => CommitText();
+        _textEntry = box;
+        _page.Children.Add(box);
+        box.Focus();
+    }
+
+    private void CommitText()
+    {
+        var box = _textEntry;
+        if (box is null) return;
+        _textEntry = null;
+        _page.Children.Remove(box);
+        var text = box.Text.TrimEnd();
+        if (text.Length == 0) return;
+        var at = (Point)box.Tag;
+        var mark = new ShapeMark(Tool.Text, at, at, ((SolidColorBrush)box.Foreground).Color, (box.FontSize - 6) / 4.5, text);
+        _shapes.Add(mark);
+        Commit(mark);
+    }
+
+    private void DropText()
+    {
+        var box = _textEntry;
+        if (box is null) return;
+        _textEntry = null;
+        _page.Children.Remove(box);
+    }
+
+    // MARK: Blur
+
+    private BitmapSource? _pixelated;
+
+    /// <summary>The picture in coarse blocks, for hiding what should not be shared.</summary>
+    private BitmapSource Pixelated()
+    {
+        if (_pixelated is not null) return _pixelated;
+        int block = Math.Clamp(_image.PixelWidth / 96, 8, 40);
+        var small = new TransformedBitmap(_image, new ScaleTransform(1.0 / block, 1.0 / block));
+        small.Freeze();
+        _pixelated = small;
+        return small;
+    }
+
+    /// <summary>Circles, boxes, arrows, text and blurs. They live here, above the ink.</summary>
     private sealed class ShapeLayer : FrameworkElement
     {
         private readonly MarkupWindow _owner;
@@ -518,7 +595,12 @@ public sealed class MarkupWindow : Window
         private ShapeMark? _live;
         private Point _start;
 
-        public ShapeLayer(MarkupWindow owner) { _owner = owner; }
+        public ShapeLayer(MarkupWindow owner)
+        {
+            _owner = owner;
+            // Blurs are drawn as enlarged blocks: no smoothing.
+            RenderOptions.SetBitmapScalingMode(this, BitmapScalingMode.NearestNeighbor);
+        }
 
         public void Add(ShapeMark m) { _marks.Add(m); InvalidateVisual(); }
         public void Remove(ShapeMark m) { _marks.Remove(m); InvalidateVisual(); }
@@ -529,6 +611,12 @@ public sealed class MarkupWindow : Window
         protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
         {
             _start = e.GetPosition(this);
+            if (_owner._tool == Tool.Text)
+            {
+                _owner.BeginText(_start);
+                e.Handled = true;
+                return;
+            }
             _live = new ShapeMark(_owner._tool, _start, _start, _owner._color, _owner.Thickness);
             CaptureMouse();
             e.Handled = true;
@@ -560,16 +648,41 @@ public sealed class MarkupWindow : Window
 
         public void Draw(DrawingContext dc)
         {
-            foreach (var m in _marks) DrawMark(dc, m);
-            if (_live is not null) DrawMark(dc, _live);
+            // Blurs go under everything else, so a circle around a hidden bit stays visible.
+            foreach (var m in _marks) if (m.Kind == Tool.Blur) DrawMark(dc, m);
+            if (_live is { Kind: Tool.Blur }) DrawMark(dc, _live);
+            foreach (var m in _marks) if (m.Kind != Tool.Blur) DrawMark(dc, m);
+            if (_live is { } live && live.Kind != Tool.Blur) DrawMark(dc, live);
         }
 
-        private static void DrawMark(DrawingContext dc, ShapeMark m)
+        private void DrawMark(DrawingContext dc, ShapeMark m)
         {
             var pen = new Pen(new SolidColorBrush(m.Color), m.Thickness) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round, LineJoin = PenLineJoin.Round };
             var rect = new Rect(m.From, m.To);
             switch (m.Kind)
             {
+                case Tool.Text:
+                {
+                    var ft = new FormattedText(m.Text ?? "", System.Globalization.CultureInfo.CurrentUICulture,
+                        Strings.IsRtl ? FlowDirection.RightToLeft : FlowDirection.LeftToRight,
+                        new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal),
+                        FontSizeFor(m.Thickness), new SolidColorBrush(m.Color), 1.0);
+                    var origin = new Point(m.From.X, m.From.Y - FontSizeFor(m.Thickness) * 0.7);
+                    // A thin halo in the opposite tone keeps the words readable over anything.
+                    var halo = m.Color.R + m.Color.G + m.Color.B > 380 ? Color.FromArgb(0xA0, 0, 0, 0) : Color.FromArgb(0xA0, 0xFF, 0xFF, 0xFF);
+                    var geometry = ft.BuildGeometry(origin);
+                    dc.DrawGeometry(null, new Pen(new SolidColorBrush(halo), Math.Max(1.5, m.Thickness * 0.5)) { LineJoin = PenLineJoin.Round }, geometry);
+                    dc.DrawText(ft, origin);
+                    break;
+                }
+                case Tool.Blur:
+                {
+                    if (rect.Width < 1 || rect.Height < 1) break;
+                    dc.PushClip(new RectangleGeometry(rect));
+                    dc.DrawImage(_owner.Pixelated(), new Rect(0, 0, _owner._page.Width, _owner._page.Height));
+                    dc.Pop();
+                    break;
+                }
                 case Tool.Circle:
                     dc.DrawEllipse(null, pen, new Point(rect.X + rect.Width / 2, rect.Y + rect.Height / 2), rect.Width / 2, rect.Height / 2);
                     break;

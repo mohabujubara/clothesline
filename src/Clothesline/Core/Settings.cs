@@ -47,6 +47,8 @@ public sealed class Settings
     public bool AutoArrange { get; set; }
     /// <summary>Where each photo hangs, as a fraction of the width of the screen, by file path.</summary>
     public Dictionary<string, double> Spots { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    /// <summary>Sticky notes hanging on the line, by the path of the picture each is drawn into.</summary>
+    public Dictionary<string, NoteData> Notes { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     /// <summary>auto, light or dark.</summary>
     public string Appearance { get; set; } = "auto";
     /// <summary>auto, en or ar.</summary>
@@ -113,4 +115,11 @@ public static class Log
         catch { }
         System.Diagnostics.Debug.WriteLine($"[{level}] {message}");
     }
+}
+
+/// <summary>What a sticky note says and what colour its paper is.</summary>
+public sealed class NoteData
+{
+    public string Text { get; set; } = "";
+    public string Color { get; set; } = "yellow";
 }

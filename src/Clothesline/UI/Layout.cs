@@ -5,7 +5,7 @@ namespace Clothesline.UI;
 /// <summary>Where everything goes, in device independent pixels.</summary>
 public static class Layout
 {
-    public const double PanelHeight = 210;
+    public const double PanelHeight = 240;
     public const double RopeTop = 10;
     public const double Spacing = 174;
     public const double CardWidth = 150;
@@ -20,7 +20,7 @@ public static class Layout
     public const double PhotoMaxHeight = 104;
 
     /// <summary>The rope hangs as a parabola from edge to edge of the screen.</summary>
-    public static double Sag(double width) => Math.Min(30, width * 0.018);
+    public static double Sag(double width) => Math.Min(58, width * 0.036);
 
     public static double RopeY(double x, double width)
     {

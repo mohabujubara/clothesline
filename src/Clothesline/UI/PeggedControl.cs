@@ -122,6 +122,12 @@ public sealed class PeggedControl : Canvas
         _cardHost.Children.Add(_image);
         _cardHost.Children.Add(photoEdge);
         _cardHost.Children.Add(outline);
+        if (Notes.IsNote(item.Path))
+        {
+            // A note is the paper itself: no glass, no inset.
+            _frame.Visibility = photoEdge.Visibility = outline.Visibility = Visibility.Collapsed;
+            _image.Margin = new Thickness(0);
+        }
 
         // The discard cross in the top left corner.
         _cross = new Border
@@ -231,6 +237,7 @@ public sealed class PeggedControl : Canvas
     {
         var photo = Layout.PhotoSize(Item.PixelWidth, Item.PixelHeight);
         double r = Layout.FrameRadius - Layout.FrameInset;
+        if (Notes.IsNote(Item.Path)) { _image.Clip = null; return; }
         _image.Clip = new RectangleGeometry(new Rect(0, 0, photo.Width, photo.Height), r, r);
     }
 
@@ -430,7 +437,7 @@ public sealed class PeggedControl : Canvas
         {
             _downPoint = null;
             EndPress();
-            _line.Open(Item.Id);
+            if (_line.IsNote(Item.Id)) _line.EditNote(Item.Id); else _line.Open(Item.Id);
             return;
         }
         _downPoint = e.GetPosition(this);
@@ -518,11 +525,28 @@ public sealed class PeggedControl : Canvas
         menu.Opened += (_, _) => _line.MenuOpen = true;
         menu.Closed += (_, _) => _line.MenuOpen = false;
         bool inInbox = _line.IsInInbox(id);
+        bool isNote = _line.IsNote(id);
         menu.Items.Add(MenuItemFor(Strings.Copy, () => _line.Copy(id)));
-        menu.Items.Add(MenuItemFor(Strings.Open, () => _line.Open(id)));
-        menu.Items.Add(MenuItemFor(Strings.MarkUp, () => _line.Edit(id)));
-        menu.Items.Add(MenuItemFor(Strings.EditInPaint, () => _line.EditExternal(id)));
-        if (Ocr.Available) menu.Items.Add(MenuItemFor(Strings.CopyText, () => _line.CopyText(id)));
+        if (isNote)
+        {
+            menu.Items.Add(MenuItemFor(Strings.EditNote, () => _line.EditNote(id)));
+            var colours = new MenuItem { Header = Strings.NoteColour };
+            foreach (var key in Notes.Colors)
+            {
+                var k = key;
+                var swatch = new MenuItem { Header = Strings.NoteName(k), Icon = new System.Windows.Shapes.Ellipse { Width = 12, Height = 12, Fill = new SolidColorBrush(Notes.Paper(k)) } };
+                swatch.Click += (_, _) => _line.RecolourNote(id, k);
+                colours.Items.Add(swatch);
+            }
+            menu.Items.Add(colours);
+        }
+        else
+        {
+            menu.Items.Add(MenuItemFor(Strings.Open, () => _line.Open(id)));
+            menu.Items.Add(MenuItemFor(Strings.MarkUp, () => _line.Edit(id)));
+            menu.Items.Add(MenuItemFor(Strings.EditInPaint, () => _line.EditExternal(id)));
+            if (Ocr.Available) menu.Items.Add(MenuItemFor(Strings.CopyText, () => _line.CopyText(id)));
+        }
         menu.Items.Add(MenuItemFor(Strings.ShowInExplorer, () => _line.Reveal(id)));
         var keep = MenuItemFor(Strings.KeepOnLine, () => _line.TogglePin(id));
         keep.IsChecked = Item.Pinned;
