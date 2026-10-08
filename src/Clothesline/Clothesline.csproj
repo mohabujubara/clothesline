@@ -21,7 +21,6 @@
     <Authors>Clothesline</Authors>
     <Description>Screenshots, hung out to dry. A clothesline for your screenshots along the top of the screen.</Description>
     <Copyright>MIT</Copyright>
-    <InvariantGlobalization>true</InvariantGlobalization>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CA1416;WFAC010</NoWarn>

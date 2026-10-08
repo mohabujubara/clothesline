@@ -43,6 +43,7 @@ public sealed class PeggedControl : Canvas
     private readonly Border _frame;
     private readonly Image _image;
     private readonly Border _cross;
+    private readonly Border _pen;
     private readonly Border _copied;
     private readonly TranslateTransform _copiedTranslate = new();
     private readonly DropShadowEffect _shadowEffect;
@@ -138,6 +139,30 @@ public sealed class PeggedControl : Canvas
         Glass.Paint(_cross);
         _cross.MouseLeftButtonDown += (_, e) => { e.Handled = true; _downPoint = null; _line.Discard(Item.Id); };
         _cardHost.Children.Add(_cross);
+
+        // The pen in the top right corner: mark the photo up.
+        _pen = new Border
+        {
+            Width = 20, Height = 20, CornerRadius = new CornerRadius(10),
+            HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top,
+            Margin = new Thickness(3),
+            BorderThickness = new Thickness(0.75),
+            Opacity = 0,
+            RenderTransformOrigin = new Point(0.5, 0.5),
+            RenderTransform = new ScaleTransform(0.6, 0.6),
+            Cursor = Cursors.Hand,
+            ToolTip = Strings.MarkUp,
+            Child = new System.Windows.Shapes.Path
+            {
+                Data = Geometry.Parse("M1,9 L7,3 L9,5 L3,11 Z M0,12 L3,11"),
+                Stroke = Theme.Freeze(new SolidColorBrush(Theme.Primary)), StrokeThickness = 1.4,
+                StrokeLineJoin = PenLineJoin.Round, StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round,
+                Width = 10, Height = 10, Stretch = Stretch.Uniform, IsHitTestVisible = false,
+            },
+        };
+        Glass.Paint(_pen);
+        _pen.MouseLeftButtonDown += (_, e) => { e.Handled = true; _downPoint = null; _line.Edit(Item.Id); };
+        _cardHost.Children.Add(_pen);
 
         // "Copied", under the card.
         var copiedRow = new StackPanel { Orientation = Orientation.Horizontal };
@@ -389,8 +414,9 @@ public sealed class PeggedControl : Canvas
         _shadowEffect.BlurRadius = 20 + 8 * s;
         _shadowEffect.ShadowDepth = 5 + 3 * s;
 
-        _cross.Opacity = _crossOpacity.Value;
+        _cross.Opacity = _pen.Opacity = _crossOpacity.Value;
         ((ScaleTransform)_cross.RenderTransform).ScaleX = ((ScaleTransform)_cross.RenderTransform).ScaleY = _crossScale.Value;
+        ((ScaleTransform)_pen.RenderTransform).ScaleX = ((ScaleTransform)_pen.RenderTransform).ScaleY = _crossScale.Value;
         _copied.Opacity = _copiedOpacity.Value;
         _copiedTranslate.Y = _copiedOffset.Value;
     }
@@ -494,7 +520,8 @@ public sealed class PeggedControl : Canvas
         bool inInbox = _line.IsInInbox(id);
         menu.Items.Add(MenuItemFor(Strings.Copy, () => _line.Copy(id)));
         menu.Items.Add(MenuItemFor(Strings.Open, () => _line.Open(id)));
-        menu.Items.Add(MenuItemFor(Strings.Edit, () => _line.Edit(id)));
+        menu.Items.Add(MenuItemFor(Strings.MarkUp, () => _line.Edit(id)));
+        menu.Items.Add(MenuItemFor(Strings.EditInPaint, () => _line.EditExternal(id)));
         if (Ocr.Available) menu.Items.Add(MenuItemFor(Strings.CopyText, () => _line.CopyText(id)));
         menu.Items.Add(MenuItemFor(Strings.ShowInExplorer, () => _line.Reveal(id)));
         var keep = MenuItemFor(Strings.KeepOnLine, () => _line.TogglePin(id));

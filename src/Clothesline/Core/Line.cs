@@ -221,13 +221,29 @@ public sealed class Line
         if (!Shell.Open(item.Path)) System.Media.SystemSounds.Beep.Play();
     }
 
-    /// <summary>Long press: open the photo in an editor. When saved, the line shows the new version.</summary>
+    /// <summary>Press and hold: the photo opens enlarged with a pen. Every mark is saved into the file.</summary>
     public void Edit(Guid id)
     {
         var item = Find(id);
         if (item is null) return;
         item.Used = true;
+        UI.MarkupWindow.Show(item.Path, this);
+    }
+
+    /// <summary>Open the photo in Paint, or whatever edits images on this PC.</summary>
+    public void EditExternal(Guid id)
+    {
+        var item = Find(id);
+        if (item is null) return;
+        item.Used = true;
         if (!Shell.Edit(item.Path)) System.Media.SystemSounds.Beep.Play();
+    }
+
+    /// <summary>Copies a file by path, the same way a click on its card would.</summary>
+    public void CopyPath(string path)
+    {
+        var item = _items.FirstOrDefault(i => !i.Falling && string.Equals(i.Path, path, StringComparison.OrdinalIgnoreCase));
+        if (item is not null) Copy(item.Id);
     }
 
     /// <summary>Moves the file to the Recycle Bin and takes the photo off the line.</summary>

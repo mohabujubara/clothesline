@@ -12,6 +12,12 @@ public static class Program
             System.IO.File.WriteAllText(args[2], text ?? "<ocr unavailable>");
             return text is null ? 1 : 0;
         }
+        if (args.Length == 2 && args[0] == "--markup-test")
+        {
+            var testApp = new App();
+            testApp.InitializeComponent();
+            return testApp.Run();
+        }
         if (args.Contains("--snapshot"))
         {
             var snapApp = new App();

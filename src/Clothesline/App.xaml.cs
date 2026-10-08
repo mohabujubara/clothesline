@@ -18,6 +18,12 @@ public partial class App : Application
         };
         AppDomain.CurrentDomain.UnhandledException += (_, ex) => Log.Error($"Fatal: {ex.ExceptionObject}");
 
+        if (e.Args.Length == 2 && e.Args[0] == "--markup-test")
+        {
+            bool ok = UI.MarkupWindow.SelfTest(System.IO.Path.GetFullPath(e.Args[1]), new Line(persist: false));
+            Shutdown(ok ? 0 : 1);
+            return;
+        }
         _controller = new AppController();
 
         // A second launch asks the running one to show the line.
