@@ -3,7 +3,7 @@
 # Usage: scripts/make-dmg.sh   (VERSION=x.y.z to name the files)
 set -euo pipefail
 cd "$(dirname "$0")/.."
-scripts/build-app.sh release
+bash scripts/build-app.sh release
 VERSION="$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' build/Snapline.app/Contents/Info.plist)"
 rm -f "build/Snapline-$VERSION-mac.zip" "build/Snapline-$VERSION.dmg"
 ditto -c -k --keepParent build/Snapline.app "build/Snapline-$VERSION-mac.zip"
