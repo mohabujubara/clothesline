@@ -48,14 +48,36 @@
                                 <ColumnDefinition Width="22"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <Path x:Name="Check" Data="M1,5.5 L4.5,9 L11,2" Stroke="{DynamicResource MenuFg}" StrokeThickness="1.7"
                                   StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
                                   Width="12" Height="11" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="1,0,0,0"
                                   Visibility="Hidden"/>
+                            <!-- A small picture beside the words: the note colours. -->
+                            <ContentPresenter x:Name="Icon" ContentSource="Icon" VerticalAlignment="Center" HorizontalAlignment="Left"
+                                              Margin="1,0,0,0"/>
                             <ContentPresenter Grid.Column="1" ContentSource="Header" VerticalAlignment="Center" RecognizesAccessKey="True"/>
                             <TextBlock Grid.Column="2" Text="{TemplateBinding InputGestureText}" Foreground="{DynamicResource MenuFgSecondary}"
                                        VerticalAlignment="Center" Margin="28,0,0,0" FontSize="12"/>
+                            <!-- The chevron of an item that opens a submenu. -->
+                            <Path x:Name="Arrow" Grid.Column="3" Data="M1,1 L5,5 L1,9" Stroke="{DynamicResource MenuFgSecondary}" StrokeThickness="1.4"
+                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                  Width="6" Height="10" VerticalAlignment="Center" Margin="20,0,-4,0" Visibility="Collapsed"/>
+                            <!-- The submenu itself, drawn like the menu. WPF looks for this part by name. -->
+                            <Popup x:Name="PART_Popup" Placement="Right" HorizontalOffset="-6" VerticalOffset="-18"
+                                   IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}"
+                                   AllowsTransparency="True" Focusable="False" PopupAnimation="Fade">
+                                <Grid Margin="12">
+                                    <Border CornerRadius="8" Background="{DynamicResource MenuBg}"
+                                            BorderBrush="{DynamicResource MenuBorder}" BorderThickness="1" Padding="4">
+                                        <Border.Effect>
+                                            <DropShadowEffect BlurRadius="24" ShadowDepth="6" Direction="270" Opacity="0.22" Color="Black"/>
+                                        </Border.Effect>
+                                        <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                                    </Border>
+                                </Grid>
+                            </Popup>
                         </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
@@ -64,6 +86,15 @@
                         </Trigger>
                         <Trigger Property="IsChecked" Value="True">
                             <Setter TargetName="Check" Property="Visibility" Value="Visible"/>
+                        </Trigger>
+                        <Trigger Property="Icon" Value="{x:Null}">
+                            <Setter TargetName="Icon" Property="Visibility" Value="Collapsed"/>
+                        </Trigger>
+                        <Trigger Property="Role" Value="SubmenuHeader">
+                            <Setter TargetName="Arrow" Property="Visibility" Value="Visible"/>
+                        </Trigger>
+                        <Trigger Property="Role" Value="TopLevelHeader">
+                            <Setter TargetName="Arrow" Property="Visibility" Value="Visible"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Opacity" Value="0.42"/>

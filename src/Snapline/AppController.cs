@@ -67,14 +67,9 @@ public sealed class AppController : IDisposable
         _panel.PlaceOn();
         UpdateCapacity();
 
-        _tray = new TrayIcon(_messages) { MenuProvider = BuildMenu };
+        _tray = new TrayIcon { MenuProvider = BuildMenu };
         _tray.LeftClick += Toggle;
-        _panel.Canvas.MenuRequested += () =>
-        {
-            var menu = BuildMenu();
-            menu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
-            menu.IsOpen = true;
-        };
+        _panel.Canvas.MenuRequested += () => Menus.Show(BuildMenu());
 
         _clipboard = new ClipboardWatcher(_messages, OnClipboardCapture, RecentlyHungFromFile)
         {

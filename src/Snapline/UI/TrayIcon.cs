@@ -11,15 +11,13 @@ namespace Snapline.UI;
 public sealed class TrayIcon : IDisposable
 {
     private readonly Forms.NotifyIcon _icon = new();
-    private readonly MessageWindow _focusHelper;
     private Icon? _current;
 
     public event Action? LeftClick;
     public Func<ContextMenu>? MenuProvider { get; set; }
 
-    public TrayIcon(MessageWindow focusHelper)
+    public TrayIcon()
     {
-        _focusHelper = focusHelper;
         _icon.Text = Strings.AppName;
         _icon.Visible = true;
         _icon.MouseUp += (_, e) =>
@@ -57,11 +55,7 @@ public sealed class TrayIcon : IDisposable
     {
         var menu = MenuProvider?.Invoke();
         if (menu is null) return;
-        // Without a window of its own the menu would not close on a click
-        // elsewhere. Giving a hidden window the foreground fixes that.
-        Native.SetForegroundWindow(_focusHelper.Handle);
-        menu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
-        menu.IsOpen = true;
+        Menus.Show(menu);
     }
 
     public void Balloon(string title, string text)

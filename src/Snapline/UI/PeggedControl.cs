@@ -513,9 +513,7 @@ public sealed class PeggedControl : Canvas
         e.Handled = true;
         EndPress();
         _downPoint = null;
-        var menu = BuildMenu();
-        menu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
-        menu.IsOpen = true;
+        Menus.Show(BuildMenu());
     }
 
     private ContextMenu BuildMenu()
