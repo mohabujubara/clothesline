@@ -45,7 +45,10 @@ public sealed class SettingsWindow : Window
         var w = new SettingsWindow(apply);
         var content = (FrameworkElement)w.Content;
         w.Content = null;
-        return content;
+        if (content is ScrollViewer sv) { sv.VerticalScrollBarVisibility = ScrollBarVisibility.Disabled; sv.MaxHeight = double.PositiveInfinity; }
+        var border = new Border { Width = 500, Background = w.Background, Child = content };
+        System.Windows.Documents.TextElement.SetForeground(border, w.Foreground);
+        return border;
     }
 
     private SettingsWindow(Action apply)

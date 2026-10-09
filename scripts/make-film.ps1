@@ -19,5 +19,5 @@ $p = Start-Process $exe -ArgumentList '--demo', $frames -Wait -PassThru
 "frames exit $($p.ExitCode): $((Get-ChildItem $frames -Filter *.png).Count) frames"
 
 & $ffmpeg -y -loglevel error -framerate 30 -i (Join-Path $frames 'frame_%04d.png') -c:v libx264 -pix_fmt yuv420p -crf 20 -preset slow -movflags +faststart (Join-Path $root 'docs\demo.mp4')
-& $ffmpeg -y -loglevel error -framerate 30 -i (Join-Path $frames 'frame_%04d.png') -vf "fps=15,scale=1000:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=160[p];[s1][p]paletteuse=dither=bayer:bayer_scale=4" -loop 0 (Join-Path $root 'docs\demo.gif')
+& $ffmpeg -y -loglevel error -framerate 30 -i (Join-Path $frames 'frame_%04d.png') -vf "fps=12,scale=900:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=160[p];[s1][p]paletteuse=dither=bayer:bayer_scale=4" -loop 0 (Join-Path $root 'docs\demo.gif')
 Get-Item (Join-Path $root 'docs\demo.mp4'), (Join-Path $root 'docs\demo.gif'), (Join-Path $root 'docs\hero-light.png') | Select-Object Name, @{n='MB';e={[math]::Round($_.Length/1MB,2)}}

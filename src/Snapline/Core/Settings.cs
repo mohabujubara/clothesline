@@ -16,12 +16,26 @@ public sealed class Settings
         try
         {
             var old = Path.Combine(Path.GetDirectoryName(folder)!, "Clothesline");
-            if (!Directory.Exists(folder) && Directory.Exists(old))
+            var marker = Path.Combine(folder, ".migrated");
+            if (!Directory.Exists(old) || File.Exists(marker)) return folder;
+            Directory.CreateDirectory(folder);
+            // The old settings win, with their paths rewritten to the new folder.
+            var oldJson = Path.Combine(old, "settings.json");
+            if (File.Exists(oldJson))
+                File.WriteAllText(Path.Combine(folder, "settings.json"), File.ReadAllText(oldJson).Replace("\\\\Clothesline\\\\", "\\\\Snapline\\\\"));
+            // Caught captures, originals and the rest come along, file by file.
+            foreach (var dir in Directory.GetDirectories(old))
             {
-                Directory.Move(old, folder);
-                var json = Path.Combine(folder, "settings.json");
-                if (File.Exists(json)) File.WriteAllText(json, File.ReadAllText(json).Replace("\\Clothesline\\\\", "\\Snapline\\\\"));
+                var target = Path.Combine(folder, Path.GetFileName(dir));
+                Directory.CreateDirectory(target);
+                foreach (var file in Directory.GetFiles(dir))
+                {
+                    var dest = Path.Combine(target, Path.GetFileName(file));
+                    if (!File.Exists(dest)) File.Move(file, dest);
+                }
             }
+            File.WriteAllText(marker, DateTime.Now.ToString("o"));
+            try { Directory.Delete(old, recursive: true); } catch { }
         }
         catch { }
         return folder;
@@ -93,8 +107,12 @@ public sealed class Settings
         return new Settings();
     }
 
+    /// <summary>True while rendering art: the real settings file is left alone.</summary>
+    public static bool ReadOnly { get; set; }
+
     public void Save()
     {
+        if (ReadOnly) return;
         try
         {
             Directory.CreateDirectory(Folder);

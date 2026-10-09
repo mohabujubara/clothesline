@@ -58,14 +58,12 @@ public static class Demo
 
         public Scene()
         {
-            Root.Children.Add(Wallpaper());
-            Root.Children.Add(DesktopIcons());
+            // A real Windows 11 desktop, taskbar and all, as the backdrop.
+            Root.Children.Add(new Image { Source = Thumbnails.Load(Sample("desktop.png"), int.MaxValue, 2)!.Value.Image, Stretch = Stretch.UniformToFill });
             Root.Children.Add(BrowserWindow(out PageImage));
 
             Canvas = new LineCanvas(Line) { Width = W, Height = Layout.PanelHeight, VerticalAlignment = VerticalAlignment.Top };
             Root.Children.Add(Canvas);
-
-            Root.Children.Add(Taskbar());
             Root.Children.Add(Overlay);
 
             CaptionText = new TextBlock { FontFamily = Display, FontSize = 26, FontWeight = FontWeights.SemiBold, Foreground = new SolidColorBrush(Color.FromRgb(0x1C, 0x1C, 0x22)) };
@@ -171,7 +169,7 @@ public static class Demo
             var tab = new Border { Width = 230, Height = 34, Margin = new Thickness(10, 8, 0, 0), CornerRadius = new CornerRadius(8, 8, 0, 0), Background = Brushes.White, VerticalAlignment = VerticalAlignment.Bottom, HorizontalAlignment = HorizontalAlignment.Left };
             var tabRow = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(12, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
             tabRow.Children.Add(new Ellipse { Width = 14, Height = 14, Fill = new SolidColorBrush(Color.FromRgb(0x2E, 0x8A, 0xF2)), Margin = new Thickness(0, 0, 8, 0) });
-            tabRow.Children.Add(new TextBlock { Text = "Quarterly report", FontFamily = Text, FontSize = 12.5, VerticalAlignment = VerticalAlignment.Center });
+            tabRow.Children.Add(new TextBlock { Text = "Yahoo Finance", FontFamily = Text, FontSize = 12.5, VerticalAlignment = VerticalAlignment.Center });
             tab.Child = tabRow;
             DockPanel.SetDock(tab, Dock.Left);
             tabs.Children.Add(tab);
@@ -183,31 +181,16 @@ public static class Demo
             DockPanel.SetDock(nav, Dock.Left);
             bar.Children.Add(nav);
             var address = new Border { Height = 30, Margin = new Thickness(0, 7, 16, 7), CornerRadius = new CornerRadius(15), Background = new SolidColorBrush(Color.FromRgb(0xF1, 0xF3, 0xF4)) };
-            address.Child = new TextBlock { Text = "contoso.com/reports/q3", FontFamily = Text, FontSize = 13, Margin = new Thickness(14, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center, Foreground = new SolidColorBrush(Color.FromRgb(0x30, 0x30, 0x35)) };
+            address.Child = new TextBlock { Text = "finance.yahoo.com", FontFamily = Text, FontSize = 13, Margin = new Thickness(14, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center, Foreground = new SolidColorBrush(Color.FromRgb(0x30, 0x30, 0x35)) };
             bar.Children.Add(address);
             DockPanel.SetDock(bar, Dock.Top);
             dock.Children.Add(bar);
             var rule = new Rectangle { Height = 1, Fill = new SolidColorBrush(Color.FromRgb(0xE4, 0xE4, 0xE8)) };
             DockPanel.SetDock(rule, Dock.Top);
             dock.Children.Add(rule);
-            var page = new Canvas { Background = Brushes.White };
-            page.Children.Add(new TextBlock { Text = "Q3 at a glance", FontFamily = Display, FontSize = 30, FontWeight = FontWeights.SemiBold, Foreground = new SolidColorBrush(Color.FromRgb(0x1C, 0x1C, 0x22)), Margin = new Thickness(60, 40, 0, 0) });
-            double y = 100;
-            foreach (double wdt in new[] { 560, 520, 580, 440 })
-            {
-                page.Children.Add(new Rectangle { Width = wdt, Height = 12, RadiusX = 6, RadiusY = 6, Fill = new SolidColorBrush(Color.FromRgb(0xD6, 0xD8, 0xDD)), Margin = new Thickness(60, y, 0, 0) });
-                y += 28;
-            }
-            pageImage = new Image { Stretch = Stretch.UniformToFill };
-            var frame = new Border { Child = pageImage, CornerRadius = new CornerRadius(6), ClipToBounds = true, Margin = new Thickness(460, 202, 0, 0), Width = 420, Height = 262 };
-            page.Children.Add(frame);
-            page.Children.Add(new TextBlock { Text = "Figure 3. Evening demand curve", FontFamily = Text, FontSize = 12, Foreground = new SolidColorBrush(Color.FromRgb(0x70, 0x70, 0x76)), Margin = new Thickness(460, 472, 0, 0) });
-            y = 230;
-            foreach (double wdt in new[] { 340, 360, 300, 350, 320, 280 })
-            {
-                page.Children.Add(new Rectangle { Width = wdt, Height = 12, RadiusX = 6, RadiusY = 6, Fill = new SolidColorBrush(Color.FromRgb(0xE2, 0xE4, 0xE8)), Margin = new Thickness(60, y, 0, 0) });
-                y += 28;
-            }
+            // The page itself is a real screenshot, top aligned and cropped to the window.
+            pageImage = new Image { Stretch = Stretch.UniformToFill, VerticalAlignment = VerticalAlignment.Top, HorizontalAlignment = HorizontalAlignment.Left };
+            var page = new Border { Background = Brushes.White, ClipToBounds = true, Child = pageImage };
             dock.Children.Add(page);
             win.Child = dock;
             return win;
@@ -301,6 +284,9 @@ public static class Demo
 
     private static void ApplyLook()
     {
+        Settings.ReadOnly = true;
+        Settings.Current.LineOffset = 0;
+        Settings.Current.HotKey = "Ctrl+Alt+T";
         Settings.Current.Language = "en";
         Strings.Refresh();
         Settings.Current.AutoArrange = false;
@@ -324,11 +310,15 @@ public static class Demo
         var temp = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "snapline-demo");
         Directory.CreateDirectory(temp);
         string Copy(string name) { var p = System.IO.Path.Combine(temp, name); File.Copy(Sample(name), p, true); return p; }
-        var docPath = Copy("document.png");
-        var dashPath = Copy("dashboard.png");
-        var sunsetPath = Copy("sunset.png");
+        var docPath = Copy("arabic-site.png");
+        var dashPath = Copy("arabic-dashboard.png");
         var notePath = System.IO.Path.Combine(temp, "Note demo.png");
-        scene.PageImage.Source = Thumbnails.Load(sunsetPath, 900, 2)!.Value.Image;
+        // The page in the browser, and the piece of it that gets snipped.
+        var yahoo = Thumbnails.Load(Sample("yahoo.png"), int.MaxValue, 2)!.Value.Image;
+        scene.PageImage.Source = yahoo;
+        var snipInPage = new Int32Rect(420, 118, 420, 212);
+        var sunsetPath = System.IO.Path.Combine(temp, "snip.png");
+        Thumbnails.SavePng(new CroppedBitmap(yahoo, snipInPage), sunsetPath);
         scene.Relayout();
 
         var docId = line.Hang(docPath, quietly: true)!.Value;
@@ -352,13 +342,14 @@ public static class Demo
         tl.Caption("Rest the pointer at the top edge. The line comes down.", 1.4, 3.7);
         tl.Move(new Point(760, 2), new Point(760, 150), 1.8, 2.4);
 
-        // A snip of the page flies to the line.
-        var snipRect = new Rect(640, 330, 420, 262);
+        // A snip of the page flies to the line. The page is scaled to the window's inner width.
+        double pageScale = 1238.0 / yahoo.PixelWidth;
+        var snipRect = new Rect(181 + snipInPage.X * pageScale, 215 + snipInPage.Y * pageScale, snipInPage.Width * pageScale, snipInPage.Height * pageScale);
         Flight? flight = null;
         tl.Caption("Take a screenshot. It hangs the moment you let go.", 3.9, 6.6);
-        tl.Move(new Point(760, 150), new Point(640, 330), 3.7, 4.2);
+        tl.Move(new Point(760, 150), snipRect.TopLeft, 3.7, 4.2);
         tl.Snip(snipRect, 4.2, 5.1);
-        tl.Move(new Point(640, 330), new Point(1060, 592), 4.25, 5.05);
+        tl.Move(snipRect.TopLeft, snipRect.BottomRight, 4.25, 5.05);
         Guid sunsetId = Guid.Empty;
         tl.At(5.15, () =>
         {
@@ -373,7 +364,7 @@ public static class Demo
         });
 
         // Click to copy.
-        tl.Move(new Point(1060, 592), new Point(976, 120), 6.3, 6.9);
+        tl.Move(snipRect.BottomRight, new Point(976, 120), 6.3, 6.9);
         tl.Click(7.1);
         tl.At(7.1, () => { line.CopiedLabel = Strings.Copied; line.CopiedId = sunsetId; });
         tl.Caption("Click to copy. Paste it anywhere.", 6.9, 9.2);
@@ -397,51 +388,54 @@ public static class Demo
         tl.Fade(() => editorHost, 13.2, 13.55, true);
         tl.Caption("Pen, highlighter, circle, box, arrow, text. Six colours, three sizes.", 14.6, 18.4);
         tl.At(14.4, () => { editor?.Tool("Pen"); editor?.Colour(0); editor?.Size(1); });
+        // The gestures are written in the picture's own pixels (1030 x 427) and the pointer follows them.
+        Point OnScreen(double ix, double iy) => editor is null ? new Point(800, 450) : new Point(230 + editor.PagePoint(ix, iy).X * 1140 / editor.Width + 13, 95 + 48 + editor.PagePoint(ix, iy).Y * 1140 / editor.Width + 4);
         var penPts = new List<Point>();
-        tl.Move(new Point(400, 240), new Point(760, 250), 14.6, 15.6, p =>
+        tl.MoveTo(() => OnScreen(1000, 122), () => OnScreen(640, 122), 14.6, 15.6, k =>
         {
             if (editor is null) return;
-            penPts.Add(editor.PagePoint((p.X - 400) / 360 * 480 + 80, 180 + Math.Sin((p.X - 400) / 40) * 10));
+            double ix = 1000 - 360 * k;
+            penPts.Add(editor.PagePoint(ix, 122 + Math.Sin(k * 14) * 5));
             editor.LiveStroke(penPts);
         });
         tl.At(15.65, () => editor?.EndLiveStroke());
         tl.At(15.9, () => { editor?.Tool("Highlighter"); editor?.Colour(1); });
         var hiPts = new List<Point>();
-        tl.Move(new Point(400, 290), new Point(880, 290), 16.0, 16.9, p =>
+        tl.MoveTo(() => OnScreen(1010, 152), () => OnScreen(230, 152), 16.0, 16.9, k =>
         {
             if (editor is null) return;
-            hiPts.Add(editor.PagePoint(80 + (p.X - 400) / 480 * 760, 254));
+            hiPts.Add(editor.PagePoint(1010 - 780 * k, 152));
             editor.LiveStroke(hiPts);
         });
         tl.At(16.95, () => editor?.EndLiveStroke());
         tl.At(17.2, () => { editor?.Tool("Circle"); editor?.Colour(0); editor?.Size(1); });
-        tl.Move(new Point(420, 380), new Point(720, 470), 17.3, 18.1, p =>
+        tl.MoveTo(() => OnScreen(640, 268), () => OnScreen(935, 385), 17.3, 18.1, k =>
         {
             if (editor is null) return;
-            editor.LiveShape(editor.PagePoint(70, 400), editor.PagePoint(70 + (p.X - 420) / 300 * 520, 400 + (p.Y - 380) / 90 * 170));
+            editor.LiveShape(editor.PagePoint(640, 268), editor.PagePoint(640 + 295 * k, 268 + 117 * k));
         });
-        tl.At(18.15, () => editor?.Shape(editor.PagePoint(70, 400), editor.PagePoint(590, 570)));
+        tl.At(18.15, () => editor?.Shape(editor.PagePoint(640, 268), editor.PagePoint(935, 385)));
         tl.Caption("Blur hides what should not be shared.", 18.6, 20.6);
         tl.At(18.7, () => editor?.Tool("Blur"));
-        tl.Move(new Point(760, 470), new Point(1000, 560), 18.8, 19.5, p =>
+        tl.MoveTo(() => OnScreen(1018, 390), () => OnScreen(220, 424), 18.8, 19.5, k =>
         {
             if (editor is null) return;
-            editor.LiveShape(editor.PagePoint(700, 420), editor.PagePoint(700 + (p.X - 760) / 240 * 380, 420 + (p.Y - 470) / 90 * 300));
+            editor.LiveShape(editor.PagePoint(1018, 390), editor.PagePoint(1018 - 798 * k, 390 + 34 * k));
         });
-        tl.At(19.55, () => editor?.Shape(editor.PagePoint(700, 420), editor.PagePoint(1080, 720)));
+        tl.At(19.55, () => editor?.Shape(editor.PagePoint(1018, 390), editor.PagePoint(220, 424)));
         tl.At(20.0, () => { editor?.Tool("Text"); editor?.Colour(0); editor?.Size(2); });
-        tl.Move(new Point(1000, 560), new Point(470, 640), 19.8, 20.3);
+        tl.MoveTo(() => OnScreen(220, 424), () => OnScreen(60, 300), 19.8, 20.3);
         tl.Click(20.4);
-        tl.At(20.5, () => editor?.Text(editor.PagePoint(90, 640), "Fix this before Monday"));
+        tl.At(20.5, () => editor?.Text(editor.PagePoint(60, 300), "Check this before Monday"));
         tl.Caption("Every mark saves into the file as you go. Undo, redo, revert to the original.", 20.8, 24.2);
         tl.At(22.0, () => editor?.Undo());
-        tl.At(22.9, () => editor?.Text(editor.PagePoint(90, 640), "Fix this before Monday"));
+        tl.At(22.9, () => editor?.Text(editor.PagePoint(60, 300), "Check this before Monday"));
         tl.At(24.0, () => editor?.Save());
         tl.Fade(() => editorHost, 24.3, 24.6, false);
         tl.At(24.7, () => { if (editorHost is not null) scene.Overlay.Children.Remove(editorHost); editorHost = null; });
 
         // Copy text.
-        tl.Move(new Point(470, 640), docPoint, 24.6, 25.2);
+        tl.MoveTo(() => OnScreen(60, 300), () => docPoint, 24.6, 25.2);
         tl.Caption("Copy text reads the words off a screenshot with Windows OCR.", 25.3, 28.2);
         tl.Click(25.6);
         tl.At(25.6, () => { line.CopiedLabel = Strings.TextCopied; line.CopiedId = docId; });
@@ -493,9 +487,9 @@ public static class Demo
         // Settings: the look changes live.
         Border? settingsHost = null;
         tl.Caption("Your line, your way: ten colours, three kinds of pegs, light or dark, English or Arabic.", 38.2, 44.6);
-        tl.At(38.4, () => settingsHost = scene.Host(SettingsWindow.ForDemo(() => { }), 1000, 90));
+        tl.At(38.4, () => settingsHost = scene.Host(SettingsWindow.ForDemo(() => { }), 1090, 40, 470));
         tl.Fade(() => settingsHost, 38.4, 38.75, true);
-        tl.Move(new Point(700, 420), new Point(1240, 400), 38.6, 39.4);
+        tl.Move(new Point(700, 420), new Point(1400, 330), 38.6, 39.4);
         tl.Click(39.8);
         tl.At(39.8, () => { Settings.Current.RopeColor = "blue"; Pegs.RaiseLookChanged(); RefreshSettings(settingsHost); });
         tl.Click(41.2);
@@ -507,7 +501,7 @@ public static class Demo
 
         // Move away: the line tucks itself up.
         tl.Caption("Move away and it's gone. Clicks go straight through to your windows.", 44.8, 47.6);
-        tl.Move(new Point(1240, 400), new Point(1120, 620), 44.8, 45.8);
+        tl.Move(new Point(1400, 330), new Point(1120, 620), 44.8, 45.8);
         tl.At(45.4, () => canvas.Revealed = false);
 
         // Title card.
@@ -563,7 +557,10 @@ public static class Demo
         });
 
         var scene = new Scene();
-        scene.PageImage.Source = Thumbnails.Load(Sample("sunset.png"), 900, 2)!.Value.Image;
+        var yahoo = Thumbnails.Load(Sample("yahoo.png"), int.MaxValue, 2)!.Value.Image;
+        scene.PageImage.Source = yahoo;
+        var snipPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "snapline-hero-snip.png");
+        Thumbnails.SavePng(new CroppedBitmap(yahoo, new Int32Rect(420, 118, 420, 212)), snipPath);
         var desk = new Border
         {
             Width = 2160, Height = 700, CornerRadius = new CornerRadius(40), ClipToBounds = true,
@@ -576,9 +573,9 @@ public static class Demo
         root.Children.Add(desk);
 
         var line = scene.Line;
-        var a = line.Hang(Sample("document.png"), quietly: true)!.Value;
-        var b = line.Hang(Sample("sunset.png"), quietly: true)!.Value;
-        var c = line.Hang(Sample("dashboard.png"), quietly: true)!.Value;
+        var a = line.Hang(Sample("arabic-site.png"), quietly: true)!.Value;
+        var b = line.Hang(snipPath, quietly: true)!.Value;
+        var c = line.Hang(Sample("arabic-dashboard.png"), quietly: true)!.Value;
         scene.Relayout();
         line.SetSpot(a, 0.36, save: false); line.SetSpot(b, 0.5, save: false); line.SetSpot(c, 0.64, save: false);
         scene.Canvas.RelayoutNow();
@@ -622,6 +619,10 @@ public static class Demo
 
         public void At(double t, Action act) => _events.Add((t, act, false));
         public void Move(Point from, Point to, double t0, double t1, Action<Point>? each = null) => _moves.Add((from, to, t0, t1, each));
+
+        /// <summary>A move whose ends are only known when it starts, with progress 0..1 reported along the way.</summary>
+        private readonly List<(Func<Point> from, Func<Point> to, double t0, double t1, Action<double>? each)> _lateMoves = new();
+        public void MoveTo(Func<Point> from, Func<Point> to, double t0, double t1, Action<double>? each = null) => _lateMoves.Add((from, to, t0, t1, each));
         public void Caption(string text, double t0, double t1) => _captions.Add((text, t0, t1));
         public void Snip(Rect rect, double t0, double t1) => _snips.Add((rect, t0, t1));
         public void Click(double t) => _clicks.Add(t);
@@ -642,6 +643,14 @@ public static class Demo
                 double k = Ease.InOutCubic(Math.Clamp((t - t0) / (t1 - t0), 0, 1));
                 _scene.Pointer = new Point(from.X + (to.X - from.X) * k, from.Y + (to.Y - from.Y) * k);
                 each?.Invoke(_scene.Pointer);
+            }
+            foreach (var (from, to, t0, t1, each) in _lateMoves)
+            {
+                if (t < t0 || t > t1 + _dt) continue;
+                double k = Ease.InOutCubic(Math.Clamp((t - t0) / (t1 - t0), 0, 1));
+                var a = from(); var b = to();
+                _scene.Pointer = new Point(a.X + (b.X - a.X) * k, a.Y + (b.Y - a.Y) * k);
+                each?.Invoke(k);
             }
             foreach (var (host, t0, t1, In) in _fades)
             {
