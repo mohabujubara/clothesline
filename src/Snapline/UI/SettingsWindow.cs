@@ -59,6 +59,7 @@ public sealed class SettingsWindow : Window
         ResizeMode = ResizeMode.NoResize;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
         ShowInTaskbar = true;
+        Icon = Brand.Icon;
         FlowDirection = Strings.Flow;
         FontFamily = new FontFamily("Segoe UI Variable Text, Segoe UI");
         FontSize = 13;
@@ -80,6 +81,9 @@ public sealed class SettingsWindow : Window
         _building = true;
         var s = Settings.Current;
         var stack = new StackPanel { Margin = new Thickness(24, 16, 24, 18) };
+        var header = Brand.Lockup(26, Theme.AppsDark);
+        header.Margin = new Thickness(0, 0, 0, 6);
+        stack.Children.Add(header);
 
         // The line
         stack.Children.Add(Heading(Strings.SectionLine));

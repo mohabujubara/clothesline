@@ -542,17 +542,19 @@ public static class Demo
         if (dark) { Settings.Current.Appearance = "dark"; Theme.ApplySetting(); }
 
         const int bw = 2400, bh = 1280;
-        var root = new Grid { Width = bw, Height = bh, Background = new SolidColorBrush(dark ? Color.FromRgb(0x0D, 0x11, 0x17) : Colors.White) };
+        var root = new Grid { Width = bw, Height = bh, Background = new SolidColorBrush(dark ? Brand.Charcoal : Colors.White) };
+        FrameworkElement head = Brand.LockupImage(dark) is { } lockupImage
+            ? new Image { Source = lockupImage, Height = 190, Stretch = Stretch.Uniform }
+            : Brand.Lockup(150, dark);
+        head.HorizontalAlignment = HorizontalAlignment.Center;
+        head.VerticalAlignment = VerticalAlignment.Top;
+        head.Margin = new Thickness(0, 86, 0, 0);
+        RenderOptions.SetBitmapScalingMode(head, BitmapScalingMode.HighQuality);
+        root.Children.Add(head);
         root.Children.Add(new TextBlock
         {
-            Text = Title, FontFamily = Display, FontSize = 150, FontWeight = FontWeights.Bold,
-            Foreground = new SolidColorBrush(dark ? Colors.White : Color.FromRgb(0x1C, 0x1C, 0x1E)),
-            HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 110, 0, 0),
-        });
-        root.Children.Add(new TextBlock
-        {
-            Text = "Screenshots, hung out to dry. For Windows.", FontFamily = Display, FontSize = 54,
-            Foreground = new SolidColorBrush(dark ? Color.FromRgb(0x9A, 0xA0, 0xA8) : Color.FromRgb(0x6E, 0x6E, 0x73)),
+            Text = "Screenshots, hung out to dry. For Windows.", FontFamily = Display, FontSize = 54, FontWeight = FontWeights.Medium,
+            Foreground = Brand.Muted(dark),
             HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 300, 0, 0),
         });
 
@@ -748,9 +750,14 @@ public static class Demo
         {
             var g = new Grid { Width = W, Height = H, Background = new SolidColorBrush(Color.FromArgb(0xF2, 0xFF, 0xFF, 0xFF)) };
             var stack = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-            stack.Children.Add(new TextBlock { Text = Demo.Title, FontFamily = Display, FontSize = 110, FontWeight = FontWeights.Bold, Foreground = new SolidColorBrush(Color.FromRgb(0x1C, 0x1C, 0x1E)), HorizontalAlignment = HorizontalAlignment.Center });
-            stack.Children.Add(new TextBlock { Text = "Screenshots, hung out to dry. For Windows 10 and 11.", FontFamily = Display, FontSize = 40, Foreground = new SolidColorBrush(Color.FromRgb(0x6E, 0x6E, 0x73)), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 6, 0, 0) });
-            stack.Children.Add(new TextBlock { Text = Demo.Link, FontFamily = Text, FontSize = 30, Foreground = new SolidColorBrush(Color.FromRgb(0x1E, 0x66, 0xE5)), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 40, 0, 0) });
+            FrameworkElement lockup = Brand.LockupImage() is { } lockupImage
+                ? new Image { Source = lockupImage, Height = 150, Stretch = Stretch.Uniform }
+                : Brand.Lockup(110);
+            lockup.HorizontalAlignment = HorizontalAlignment.Center;
+            RenderOptions.SetBitmapScalingMode(lockup, BitmapScalingMode.HighQuality);
+            stack.Children.Add(lockup);
+            stack.Children.Add(new TextBlock { Text = "Screenshots, hung out to dry. For Windows 10 and 11.", FontFamily = Display, FontSize = 40, FontWeight = FontWeights.Medium, Foreground = Brand.Muted(), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 10, 0, 0) });
+            stack.Children.Add(new TextBlock { Text = Demo.Link, FontFamily = Text, FontSize = 30, Foreground = Brand.Accent(), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 40, 0, 0) });
             stack.Children.Add(new TextBlock { Text = "Free and open source", FontFamily = Text, FontSize = 24, Foreground = new SolidColorBrush(Color.FromRgb(0x8E, 0x8E, 0x93)), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 8, 0, 0) });
             g.Children.Add(stack);
             _scene.Overlay.Children.Add(g);

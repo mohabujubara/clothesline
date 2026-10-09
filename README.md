@@ -138,13 +138,13 @@ Snapline runs entirely on your PC, and your screenshots never leave it.
 
 ## Install
 
-1. Download **Snapline-portable.exe** from the [latest release](https://github.com/mohabujubara/snapline/releases/latest).
-2. Put it anywhere you like and run it. It lives in the notification area, next to the clock.
-3. Right click its icon and choose *Start with Windows* to keep it around.
+1. Download **Snapline-Setup.exe** from the [latest release](https://github.com/mohabujubara/snapline/releases/latest) and run it.
+2. Snapline lives in the notification area, next to the clock. Tick *Start Snapline when I sign in* in Setup, or later in Settings.
 
 The first time, SmartScreen may say "Windows protected your PC" because the app is not
 code-signed yet. Click *More info*, then *Run anyway*.
 
+Prefer not to install? **Snapline-portable.exe** runs from anywhere with nothing to set up.
 There is also a much smaller build, `Snapline.exe`, for PCs that already have the
 [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0).
 
@@ -185,8 +185,10 @@ Requires the .NET 8 SDK. Visual Studio is optional.
 Settings and the log live in `%LOCALAPPDATA%\Snapline`. The hot key, extra folders to
 watch and the folder for caught captures can be changed in `settings.json`.
 
-The icon and the images in this README are drawn in code: `scripts\make-icon.ps1`,
-`scripts\make-samples.ps1`, and `Snapline.exe --snapshot out.png image1 image2 …`.
+The mark and the wordmark live in `design\` (Manrope ExtraBold, under the OFL). `scripts\make-brand.ps1`
+assembles the icon, the banner pieces and the installer images from them; `scripts\make-samples.ps1`
+draws the sample screenshots; `Snapline.exe --snapshot out.png image1 image2 …` renders the line, and
+`scripts\make-film.ps1` renders the film.
 
 </details>
 

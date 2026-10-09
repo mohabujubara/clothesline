@@ -46,6 +46,7 @@ public sealed class NoteWindow : Window
         WindowStyle = WindowStyle.None;
         ResizeMode = ResizeMode.NoResize;
         ShowInTaskbar = true;
+        Icon = Brand.Icon;
         Topmost = true;
         Width = 420; Height = 340;
         FlowDirection = Strings.Flow;

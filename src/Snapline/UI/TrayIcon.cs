@@ -34,9 +34,23 @@ public sealed class TrayIcon : IDisposable
     public void Repaint()
     {
         var old = _current;
-        _current = Draw(Theme.SystemDark);
+        _current = LoadLogo() ?? Draw(Theme.SystemDark);
         _icon.Icon = _current;
         old?.Dispose();
+    }
+
+    /// <summary>The app icon, at the size the taskbar wants.</summary>
+    private static Icon? LoadLogo()
+    {
+        try
+        {
+            var info = System.Windows.Application.GetResourceStream(new Uri("pack://application:,,,/Assets/Snapline.ico"));
+            if (info is null) return null;
+            using var stream = info.Stream;
+            int size = (int)Math.Round(16 * (System.Windows.Forms.Screen.PrimaryScreen?.Bounds.Width ?? 1920) / 1920.0 * 1.0);
+            return new Icon(stream, new Size(Math.Max(16, size), Math.Max(16, size)));
+        }
+        catch { return null; }
     }
 
     private void ShowMenu()

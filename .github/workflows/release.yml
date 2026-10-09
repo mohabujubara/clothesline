@@ -25,7 +25,8 @@ jobs:
         shell: pwsh
         run: |
           scripts/build.ps1
-          scripts/build.ps1 -Portable
+          $v = if ($env:GITHUB_REF -like "refs/tags/v*") { $env:GITHUB_REF.Substring(11) } else { "0.0.0" }
+          scripts/build.ps1 -Portable -Installer -Version $v
 
       - name: Name the files
         shell: pwsh
@@ -34,6 +35,7 @@ jobs:
           New-Item -ItemType Directory -Force out | Out-Null
           Copy-Item dist/portable/Snapline.exe "out/Snapline-$v-portable.exe"
           Copy-Item dist/win-x64/Snapline.exe "out/Snapline-$v.exe"
+          Copy-Item "dist/Snapline-$v-Setup.exe" "out/Snapline-$v-Setup.exe"
           Get-ChildItem out
 
       - uses: actions/upload-artifact@v4
@@ -48,7 +50,8 @@ jobs:
           files: out/*.exe
           generate_release_notes: true
           body: |
-            **Snapline-*-portable.exe** runs on any Windows 10 or 11 PC. Nothing to install.
+            **Snapline-*-Setup.exe** installs Snapline with a Start Menu entry and an uninstaller. Recommended.
+            **Snapline-*-portable.exe** runs on any Windows 10 or 11 PC without installing anything.
             **Snapline-*.exe** is the small build and needs the [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0).
 
             The app is not code-signed yet, so SmartScreen may show "Windows protected your PC" the first time. Click *More info*, then *Run anyway*.

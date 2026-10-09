@@ -77,6 +77,7 @@ public sealed class MarkupWindow : Window
         ResizeMode = ResizeMode.NoResize;
         AllowsTransparency = false;
         ShowInTaskbar = true;
+        Icon = Brand.Icon;
         Topmost = true;
         FlowDirection = Strings.Flow;
         FontFamily = new FontFamily("Segoe UI Variable Text, Segoe UI");
