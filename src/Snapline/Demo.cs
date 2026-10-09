@@ -460,13 +460,54 @@ public static class Demo
             line.Drop(dashId, quietly: true);
         });
 
-        // A sticky note, written in its little window.
+        // A sticky note: the paper tag opens the menu, New note, a colour, and it hangs.
         Guid noteId = Guid.Empty;
-        Border? noteHost = null;
+        Border? noteHost = null, menuHost = null, subHost = null;
+        var menuRows = new List<Border>(); var subRows = new List<Border>();
         Action<string>? typeNote = null; Action? saveNote = null;
         const string noteText = "Send the deck to Sara before 3";
-        tl.Caption("Sticky notes hang on the line too.", 33.6, 37.8);
-        tl.At(33.8, () =>
+        Point TagPoint() { var t = canvas.TagRect ?? new Rect(W - 50, 20, 34, 40); return new Point(t.X + t.Width / 2, t.Bottom - 12); }
+        Point RowCentre(List<Border> rows, int i) => rows.Count > i && rows[i].ActualWidth > 0
+            ? rows[i].TranslatePoint(new Point(rows[i].ActualWidth / 2, rows[i].ActualHeight / 2), scene.Overlay) : scene.Pointer;
+        Point colourPoint = new(700, 420);
+        tl.Caption("The paper tag on the line opens the menu.", 33.6, 35.9);
+        tl.MoveTo(() => crossPoint, TagPoint, 33.6, 34.4);
+        tl.Click(34.5);
+        tl.At(34.5, () =>
+        {
+            menuHost = DemoMenu(scene, new[]
+            {
+                (Strings.HideLine, Settings.Current.HotKey, false, false), (Strings.TakeEverythingDown, "", false, false),
+                (Strings.NewCapture, "Win+Shift+S", false, false), (Strings.NewNote, "", false, true), ("-", "", false, false),
+                (Strings.CatchClipboard, "", true, false), (Strings.StayDownWhileUnused, "", false, false), (Strings.TakeDownAfterDrag, "", false, false),
+                (Strings.OpenScreenshotsFolder, "", false, false), (Strings.OpenInboxFolder, "", false, false), ("-", "", false, false),
+                (Strings.Sounds, "", true, false), (Strings.StartWithWindows, "", false, false), (Strings.Settings, "", false, false),
+                (Strings.About, "", false, false), ("-", "", false, false), (Strings.Quit, "", false, false),
+            }, null, menuRows);
+            // Near the right edge, a menu opens to the left of the pointer, as Windows does.
+            menuHost.Measure(new Size(W, H));
+            System.Windows.Controls.Canvas.SetLeft(menuHost, scene.Pointer.X - menuHost.DesiredSize.Width + 12);
+            System.Windows.Controls.Canvas.SetTop(menuHost, scene.Pointer.Y - 10);
+            scene.Relayout();
+        });
+        tl.Fade(() => menuHost, 34.5, 34.7, true);
+        tl.MoveTo(TagPoint, () => RowCentre(menuRows, 3), 34.9, 35.5);
+        tl.At(35.55, () =>
+        {
+            Highlight(menuRows, 3);
+            subHost = DemoMenu(scene, Notes.Colors.Select(k => (Strings.NoteName(k), "", false, false)).ToArray(), Notes.Colors.Select(Notes.Paper).ToArray(), subRows);
+            subHost.Measure(new Size(W, H));
+            var rowTop = menuRows[3].TranslatePoint(new Point(0, 0), scene.Overlay);
+            System.Windows.Controls.Canvas.SetLeft(subHost, System.Windows.Controls.Canvas.GetLeft(menuHost!) - subHost.DesiredSize.Width + 30);
+            System.Windows.Controls.Canvas.SetTop(subHost, rowTop.Y - 18);
+            scene.Relayout();
+        });
+        tl.Fade(() => subHost, 35.6, 35.8, true);
+        tl.Caption("New note, in the colour you like.", 36.1, 37.5);
+        tl.MoveTo(() => RowCentre(menuRows, 3), () => RowCentre(subRows, 0), 36.0, 36.6);
+        tl.At(36.6, () => { Highlight(subRows, 0); colourPoint = RowCentre(subRows, 0); });
+        tl.Click(36.9);
+        tl.At(36.9, () =>
         {
             Settings.Current.Notes[notePath] = new NoteData { Text = "", Color = "yellow" };
             Notes.Render(Settings.Current.Notes[notePath], notePath);
@@ -478,36 +519,44 @@ public static class Demo
             typeNote = type; saveNote = save;
             noteHost = scene.Host(content, 590, 330);
         });
-        tl.Fade(() => noteHost, 34.2, 34.5, true);
-        tl.Move(crossPoint, new Point(700, 420), 33.9, 34.5);
-        tl.Type(noteText, 34.8, 36.9, s => { typeNote?.Invoke(s); saveNote?.Invoke(); });
-        tl.Fade(() => noteHost, 37.4, 37.7, false);
-        tl.At(37.8, () => { if (noteHost is not null) scene.Overlay.Children.Remove(noteHost); noteHost = null; });
+        tl.Fade(() => menuHost, 36.9, 37.1, false);
+        tl.Fade(() => subHost, 36.9, 37.1, false);
+        tl.At(37.2, () =>
+        {
+            if (menuHost is not null) scene.Overlay.Children.Remove(menuHost); menuHost = null;
+            if (subHost is not null) scene.Overlay.Children.Remove(subHost); subHost = null;
+        });
+        tl.Fade(() => noteHost, 37.3, 37.6, true);
+        tl.MoveTo(() => colourPoint, () => new Point(700, 420), 37.1, 37.7);
+        tl.Caption("Write on it. It hangs, swings and copies like any screenshot.", 37.7, 40.8);
+        tl.Type(noteText, 37.9, 40.0, s => { typeNote?.Invoke(s); saveNote?.Invoke(); });
+        tl.Fade(() => noteHost, 40.4, 40.7, false);
+        tl.At(40.8, () => { if (noteHost is not null) scene.Overlay.Children.Remove(noteHost); noteHost = null; });
 
         // Settings: the look changes live.
         Border? settingsHost = null;
-        tl.Caption("Your line, your way: ten colours, three kinds of pegs, light or dark, English or Arabic.", 38.2, 44.6);
-        tl.At(38.4, () => settingsHost = scene.Host(SettingsWindow.ForDemo(() => { }), 1090, 40, 470));
-        tl.Fade(() => settingsHost, 38.4, 38.75, true);
-        tl.Move(new Point(700, 420), new Point(1400, 330), 38.6, 39.4);
-        tl.Click(39.8);
-        tl.At(39.8, () => { Settings.Current.RopeColor = "blue"; Pegs.RaiseLookChanged(); RefreshSettings(settingsHost); });
-        tl.Click(41.2);
-        tl.At(41.2, () => { Settings.Current.PegStyle = "mixed"; Pegs.RaiseLookChanged(); RefreshSettings(settingsHost); });
-        tl.Click(42.6);
-        tl.At(42.6, () => { Settings.Current.RopeColor = "bronze"; Settings.Current.PegStyle = "wood"; Pegs.RaiseLookChanged(); RefreshSettings(settingsHost); });
-        tl.Fade(() => settingsHost, 44.2, 44.5, false);
-        tl.At(44.6, () => { if (settingsHost is not null) scene.Overlay.Children.Remove(settingsHost); settingsHost = null; });
+        tl.Caption("Your line, your way: ten colours, three kinds of pegs, light or dark, English or Arabic.", 41.2, 47.6);
+        tl.At(41.4, () => settingsHost = scene.Host(SettingsWindow.ForDemo(() => { }), 1090, 40, 470));
+        tl.Fade(() => settingsHost, 41.4, 41.75, true);
+        tl.Move(new Point(700, 420), new Point(1400, 330), 41.6, 42.4);
+        tl.Click(42.8);
+        tl.At(42.8, () => { Settings.Current.RopeColor = "blue"; Pegs.RaiseLookChanged(); RefreshSettings(settingsHost); });
+        tl.Click(44.2);
+        tl.At(44.2, () => { Settings.Current.PegStyle = "mixed"; Pegs.RaiseLookChanged(); RefreshSettings(settingsHost); });
+        tl.Click(45.6);
+        tl.At(45.6, () => { Settings.Current.RopeColor = "bronze"; Settings.Current.PegStyle = "wood"; Pegs.RaiseLookChanged(); RefreshSettings(settingsHost); });
+        tl.Fade(() => settingsHost, 47.2, 47.5, false);
+        tl.At(47.6, () => { if (settingsHost is not null) scene.Overlay.Children.Remove(settingsHost); settingsHost = null; });
 
         // Move away: the line tucks itself up.
-        tl.Caption("Move away and it's gone. Clicks go straight through to your windows.", 44.8, 47.6);
-        tl.Move(new Point(1400, 330), new Point(1120, 620), 44.8, 45.8);
-        tl.At(45.4, () => canvas.Revealed = false);
+        tl.Caption("Move away and it's gone. Clicks go straight through to your windows.", 47.8, 50.6);
+        tl.Move(new Point(1400, 330), new Point(1120, 620), 47.8, 48.8);
+        tl.At(48.4, () => canvas.Revealed = false);
 
         // Title card.
-        tl.Title(47.8, 51.5);
+        tl.Title(50.8, 54.5);
 
-        double total = 51.5;
+        double total = 54.5;
         int frame = 0;
         for (double t = 0; t < total; t += dt, frame++)
         {
@@ -526,6 +575,62 @@ public static class Demo
         }
         Log.Notice($"Demo: wrote {frame} frames to {outDir}");
         return 0;
+    }
+
+
+    /// <summary>The app's menu, drawn for the film: the same rows, the same look, no popup window needed.</summary>
+    private static Border DemoMenu(Scene scene, (string text, string gesture, bool check, bool sub)[] rows, Color[]? dots, List<Border> outRows)
+    {
+        Brush Res(string key, Color fallback) => Application.Current?.Resources[key] as Brush ?? new SolidColorBrush(fallback);
+        var fg = Res("MenuFg", Color.FromRgb(0x1C, 0x1C, 0x1C));
+        var fg2 = Res("MenuFgSecondary", Color.FromRgb(0x73, 0x73, 0x73));
+        var stack = new StackPanel();
+        for (int i = 0; i < rows.Length; i++)
+        {
+            var (text, gesture, check, sub) = rows[i];
+            if (text == "-") { stack.Children.Add(new Rectangle { Height = 1, Fill = Res("MenuSeparator", Color.FromArgb(0x14, 0, 0, 0)), Margin = new Thickness(6, 4, 6, 4) }); continue; }
+            var grid = new Grid();
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(22) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            if (check)
+                grid.Children.Add(new Path { Data = Geometry.Parse("M1,5.5 L4.5,9 L11,2"), Stroke = fg, StrokeThickness = 1.7, StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round, StrokeLineJoin = PenLineJoin.Round, Width = 12, Height = 11, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(1, 0, 0, 0) });
+            if (dots is not null && i < dots.Length)
+                grid.Children.Add(new Ellipse { Width = 12, Height = 12, Fill = new SolidColorBrush(dots[i]), VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(1, 0, 0, 0) });
+            var header = new TextBlock { Text = text, FontFamily = Text, FontSize = 13, Foreground = fg, VerticalAlignment = VerticalAlignment.Center };
+            Grid.SetColumn(header, 1); grid.Children.Add(header);
+            var key = new TextBlock { Text = gesture, FontFamily = Text, FontSize = 12, Foreground = fg2, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(28, 0, 0, 0) };
+            Grid.SetColumn(key, 2); grid.Children.Add(key);
+            if (sub)
+            {
+                var arrow = new Path { Data = Geometry.Parse("M1,1 L5,5 L1,9"), Stroke = fg2, StrokeThickness = 1.4, StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round, StrokeLineJoin = PenLineJoin.Round, Width = 6, Height = 10, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(20, 0, -4, 0) };
+                Grid.SetColumn(arrow, 3); grid.Children.Add(arrow);
+            }
+            var row = new Border { Child = grid, CornerRadius = new CornerRadius(5), Margin = new Thickness(0, 1, 0, 1), Padding = new Thickness(8, 7, 12, 7), MinWidth = 200, Background = Brushes.Transparent };
+            outRows.Add(row);
+            stack.Children.Add(row);
+        }
+        var panel = new Border
+        {
+            Child = stack, CornerRadius = new CornerRadius(8), Padding = new Thickness(4),
+            Background = Res("MenuBg", Color.FromRgb(0xF9, 0xF9, 0xF9)), BorderBrush = Res("MenuBorder", Color.FromArgb(0x1A, 0, 0, 0)), BorderThickness = new Thickness(1),
+            Effect = new DropShadowEffect { BlurRadius = 24, ShadowDepth = 6, Direction = 270, Opacity = 0.22, Color = Colors.Black },
+        };
+        var host = new Border
+        {
+            Child = new Grid { Margin = new Thickness(12), Children = { panel } },
+            Opacity = 0, RenderTransformOrigin = new Point(0.5, 0), RenderTransform = new ScaleTransform(0.96, 0.96),
+        };
+        scene.Overlay.Children.Add(host);
+        Panel.SetZIndex(host, 80);
+        return host;
+    }
+
+    private static void Highlight(List<Border> rows, int index)
+    {
+        var hover = Application.Current?.Resources["MenuHover"] as Brush ?? new SolidColorBrush(Color.FromArgb(0x0D, 0, 0, 0));
+        for (int i = 0; i < rows.Count; i++) rows[i].Background = i == index ? hover : Brushes.Transparent;
     }
 
     private static void RefreshSettings(Border? host)
