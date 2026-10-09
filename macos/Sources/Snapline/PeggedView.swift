@@ -5,6 +5,7 @@ import SwiftUI
 struct PeggedView: View {
     let item: Pegged
     @ObservedObject var line: Line
+    let width: CGFloat
 
     @State private var swing: Double = 0
     @State private var arrived = false
@@ -16,7 +17,8 @@ struct PeggedView: View {
 
     var body: some View {
         VStack(spacing: -12) {
-            Clothespin()
+            Peg(style: Settings.current.pegStyle, seed: item.seed, pinned: item.pinned)
+                .frame(width: 9, height: 26)
                 .zIndex(1)
             card
         }
@@ -52,6 +54,7 @@ struct PeggedView: View {
     static let cardOffsetBelowTop: CGFloat = 26 - 12
 
     private var photoSize: CGSize { Self.photoSize(for: item.thumb.size) }
+    private var isNote: Bool { item.isNote }
 
     private var card: some View {
         Image(nsImage: item.thumb)
@@ -59,14 +62,14 @@ struct PeggedView: View {
             .interpolation(.high)
             .frame(width: photoSize.width, height: photoSize.height)
             // Concentric corners: the photo's radius is the frame's minus the
-            // inset, the way macOS rounds nested shapes.
-            .clipShape(RoundedRectangle(cornerRadius: Frame.radius - Frame.inset, style: .continuous))
+            // inset, the way macOS rounds nested shapes. A note is the paper itself.
+            .clipShape(RoundedRectangle(cornerRadius: isNote ? 0 : Frame.radius - Frame.inset, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: Frame.radius - Frame.inset, style: .continuous)
-                    .strokeBorder(Color.white.opacity(0.18), lineWidth: 0.5)
+                    .strokeBorder(Color.white.opacity(isNote ? 0 : 0.18), lineWidth: 0.5)
             )
-            .padding(Frame.inset)
-            .glassFrame(cornerRadius: Frame.radius)
+            .padding(isNote ? 0 : Frame.inset)
+            .modifier(GlassIfPhoto(isNote: isNote))
             .shadow(color: .black.opacity(hovering ? 0.26 : 0.18), radius: hovering ? 14 : 10, y: hovering ? 8 : 5)
             // Holding presses the photo in slowly, so a long press feels like
             // it is building up to something.
@@ -74,7 +77,7 @@ struct PeggedView: View {
             .animation(pressed ? .easeInOut(duration: 0.45) : .spring(response: 0.3, dampingFraction: 0.6), value: pressed)
             .opacity(dragging ? 0.45 : 1)
             .overlay(alignment: .topLeading) {
-                // Drawn here, clicked through GrabView, which sits on top.
+                // The discard cross. Drawn here, clicked through GrabView, which sits on top.
                 Image(systemName: "xmark")
                     .font(.system(size: 8, weight: .bold))
                     .foregroundStyle(.primary)
@@ -85,10 +88,22 @@ struct PeggedView: View {
                     .scaleEffect(hovering ? 1 : 0.6)
                     .allowsHitTesting(false)
             }
-            .overlay(GrabArea(item: item, line: line))
+            .overlay(alignment: .topTrailing) {
+                // The pen: mark the photo up, or write on the note.
+                Image(systemName: "pencil")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.primary)
+                    .frame(width: 20, height: 20)
+                    .glassFrame(circle: true)
+                    .padding(3)
+                    .opacity(hovering && !dragging ? 1 : 0)
+                    .scaleEffect(hovering ? 1 : 0.6)
+                    .allowsHitTesting(false)
+            }
+            .overlay(GrabArea(item: item, line: line, width: width))
             .overlay(alignment: .bottom) {
                 if copied {
-                    Label(L("Copied"), systemImage: "checkmark")
+                    Label(line.copiedLabel, systemImage: "checkmark")
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(.primary)
                         .padding(.horizontal, 10)
@@ -101,12 +116,27 @@ struct PeggedView: View {
             .animation(.easeOut(duration: 0.18), value: hovering)
             .animation(.easeOut(duration: 0.2), value: copied)
             .onHover { hovering = $0 }
+            .help(tooltip)
             .background(
                 GeometryReader { g in
                     Color.clear.preference(key: HitRectsKey.self,
                                            value: item.falling ? [:] : [item.id: g.frame(in: .global)])
                 }
             )
+    }
+
+    private var tooltip: String {
+        let name = item.url.lastPathComponent
+        let size = pixelSize(item.url).map { "\(Int($0.width)) × \(Int($0.height))" } ?? ""
+        return "\(name)\n\(size)  ·  \(age(item.hungAt))\(item.pinned ? "  ·  " + L("Keep on the line") : "")"
+    }
+
+    private func age(_ when: Date) -> String {
+        let s = Date().timeIntervalSince(when)
+        if s < 45 { return L("just now") }
+        if s < 3600 { return String(format: L("%d min ago"), Int(s / 60)) }
+        if s < 86400 { return String(format: L("%d h ago"), Int(s / 3600)) }
+        return when.formatted(date: .abbreviated, time: .shortened)
     }
 
     private func arrive() {
@@ -140,6 +170,14 @@ struct PeggedView: View {
     }
 }
 
+/// The glass frame around a photo. A note is its own paper and gets none.
+private struct GlassIfPhoto: ViewModifier {
+    let isNote: Bool
+    func body(content: Content) -> some View {
+        if isNote { content } else { content.glassFrame(cornerRadius: Frame.radius) }
+    }
+}
+
 enum Frame {
     static let radius: CGFloat = 16
     static let inset: CGFloat = 4
@@ -161,39 +199,5 @@ extension View {
                     lineWidth: 0.75)
             )
             .overlay(shape.stroke(Color.black.opacity(0.10), lineWidth: 0.5).padding(-0.5))
-    }
-}
-
-/// A minimal aluminium clip: a brushed metal pill with a slot where it
-/// grips the line, and a soft shadow so it reads on any background.
-struct Clothespin: View {
-    private let metal = LinearGradient(
-        stops: [
-            .init(color: Color(white: 0.70), location: 0),
-            .init(color: Color(white: 0.93), location: 0.35),
-            .init(color: Color(white: 0.82), location: 0.65),
-            .init(color: Color(white: 0.62), location: 1),
-        ],
-        startPoint: .leading, endPoint: .trailing)
-
-    var body: some View {
-        RoundedRectangle(cornerRadius: 3.5, style: .continuous)
-            .fill(metal)
-            .frame(width: 9, height: 26)
-            .overlay(
-                RoundedRectangle(cornerRadius: 3.5, style: .continuous)
-                    .stroke(LinearGradient(colors: [Color.white.opacity(0.9), Color.black.opacity(0.18)],
-                                           startPoint: .top, endPoint: .bottom),
-                            lineWidth: 0.6)
-            )
-            .overlay(alignment: .top) {
-                // The slot the line passes through.
-                Capsule()
-                    .fill(Color.black.opacity(0.32))
-                    .frame(width: 5, height: 1.4)
-                    .padding(.top, 8.5)
-            }
-            .shadow(color: .black.opacity(0.30), radius: 2, y: 1.5)
-            .allowsHitTesting(false)
     }
 }

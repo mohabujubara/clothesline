@@ -14,6 +14,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     /// ignores the screenshot settings (macOS 27 renamed one), captures keep
     /// landing on the Desktop, and they still hang on the line.
     private var safetyWatcher: ScreenshotWatcher?
+    /// Captures that only reach the clipboard (Cmd+Ctrl+Shift+4).
+    private var clipboard: ClipboardWatcher!
     private var signalSources: [DispatchSourceSignal] = []
     private var hotKey: HotKey?
     private var cancellables = Set<AnyCancellable>()
@@ -45,6 +47,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var pendingScreen: NSScreen?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        applyAppearance()
         let host = NSHostingView(rootView: LineView(line: line))
         host.sizingOptions = []
         panel = LinePanel(content: host)
@@ -54,6 +57,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if Inbox.isEnabled { Inbox.apply() }
         restoreSettingsOnTermination()
         startWatcher()
+        startClipboardWatcher()
 
         hotKey = HotKey(keyCode: kVK_ANSI_T, modifiers: controlKey | optionKey) { [weak self] in
             self?.toggle()
@@ -82,36 +86,85 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
         }
 
-        NotificationCenter.default.addObserver(
-            forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
-        ) { [weak self] _ in
+        let center = NotificationCenter.default
+        center.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated {
                 self?.panel.placeOnScreen()
                 self?.updateCapacity()
             }
+        }
+        // The paper tag on the line, or a right-click on the rope: the menu.
+        center.addObserver(forName: .snaplineMenuRequested, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.popMenu() }
+        }
+        center.addObserver(forName: .snaplineSettingsChanged, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.settingsChanged() }
+        }
+        center.addObserver(forName: .snaplineInboxToggle, object: nil, queue: .main) { [weak self] note in
+            MainActor.assumeIsolated { self?.setInbox(note.object as? Bool ?? !Inbox.isEnabled) }
         }
 
         if !Inbox.wasOffered {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in self?.offerInbox() }
         }
 
-        if !UserDefaults.standard.bool(forKey: "welcomed") {
-            UserDefaults.standard.set(true, forKey: "welcomed")
+        if !Settings.current.welcomed {
+            Settings.current.welcomed = true
+            Settings.save()
             keepOpen = true
             wanted = true
             refresh()
             reveal(pinned: true)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [weak self] in
+            DispatchQueue.main.asyncAfter(deadline: .now() + 6) { [weak self] in
                 guard let self, self.line.liveCount == 0 else { return }
                 self.keepOpen = false
                 self.wanted = false
                 self.refresh()
             }
+        } else if line.liveCount > 0 {
+            // Photos restored from last time: the line is there, tucked away.
+            wanted = true
+            lastLiveCount = line.liveCount
+            refresh()
         }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
         if Inbox.isEnabled { Inbox.restore() }
+    }
+
+    // MARK: Settings
+
+    private func settingsChanged() {
+        applyAppearance()
+        clipboard.enabled = Settings.current.catchClipboard
+        panel.placeOnScreen(panel.screen)
+        line.look += 1
+        // Rebuild the status item title, in case the language changed.
+        statusItem.button?.toolTip = "Snapline"
+    }
+
+    private func applyAppearance() {
+        switch Settings.current.appearance {
+        case "light": NSApp.appearance = NSAppearance(named: .aqua)
+        case "dark": NSApp.appearance = NSAppearance(named: .darkAqua)
+        default: NSApp.appearance = nil
+        }
+    }
+
+    nonisolated static var launchesAtLogin: Bool { SMAppService.mainApp.status == .enabled }
+
+    static func setLaunchesAtLogin(_ on: Bool) {
+        guard on != launchesAtLogin else { return }
+        do {
+            if on { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
+        } catch {
+            let alert = NSAlert()
+            alert.messageText = L("Could not change the login setting")
+            alert.informativeText = L("Move Snapline to the Applications folder and try again.")
+            NSApp.activate(ignoringOtherApps: true)
+            alert.runModal()
+        }
     }
 
     // MARK: Inbox mode
@@ -135,6 +188,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             safety.start()
             safetyWatcher = safety
         }
+    }
+
+    private func startClipboardWatcher() {
+        clipboard = ClipboardWatcher(
+            onCapture: { [weak self] url, _ in self?.hangCapture(url) },
+            recentlyHungFromFile: { [weak self] size in
+                guard let self else { return false }
+                return self.line.items.contains { item in
+                    !item.falling && Date().timeIntervalSince(item.hungAt) < 5 && pixelSize(item.url) == size
+                }
+            })
+        clipboard.enabled = Settings.current.catchClipboard
+        clipboard.start()
     }
 
     private func setInbox(_ on: Bool) {
@@ -239,12 +305,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     /// Where a card will hang, in screen coordinates, using the same layout
     /// as the line view.
     private func cardFrame(for id: UUID) -> CGRect? {
-        guard let index = line.items.firstIndex(where: { $0.id == id }) else { return nil }
+        guard let item = line.item(id) else { return nil }
         let width = panel.frame.width
-        let x = Layout.x(index: index, count: line.items.count, width: width)
+        guard let x = Layout.positions(for: line, width: width)[id] else { return nil }
         let viewTop = Layout.ropeY(x: x, width: width) - Layout.pinAbove
         let cardTop = viewTop + PeggedView.cardOffsetBelowTop
-        let size = PeggedView.cardSize(for: line.items[index].thumb.size)
+        let size = PeggedView.cardSize(for: item.thumb.size)
         return CGRect(x: panel.frame.minX + x - size.width / 2,
                       y: panel.frame.maxY - cardTop - size.height,
                       width: size.width, height: size.height)
@@ -310,13 +376,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 refresh()
             }
         } else {
-            keepOpen = true
-            wanted = true
-            panel.placeOnScreen()
-            updateCapacity()
-            refresh()
-            reveal(pinned: true)
+            showLine()
         }
+    }
+
+    private func showLine() {
+        keepOpen = true
+        wanted = true
+        panel.placeOnScreen()
+        updateCapacity()
+        refresh()
+        reveal(pinned: true)
     }
 
     private func startMouseTracking() {
@@ -351,7 +421,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func watchMenuBarClicks() {
         let handler: (NSEvent?) -> Void = { [weak self] _ in
             MainActor.assumeIsolated {
-                guard let self else { return }
+                guard let self, !self.line.menuOpen else { return }
                 let p = NSEvent.mouseLocation
                 guard NSScreen.screens.contains(where: { NSMouseInRect(p, Self.menuBarBand(of: $0), false) }) else { return }
                 self.menuBarSuppressed = true
@@ -412,7 +482,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let inside = NSMouseInRect(mouse, zone, false)
         if inside && pinned { pinned = false }
 
-        let busy = pinned || GrabView.isDragging || line.pressedID != nil || now < peekUntil
+        // With "stay down until used", the line waits while something fresh hangs on it.
+        let waiting = Settings.current.stayDownWhileUnused && line.hasUnused
+        let busy = pinned || waiting || line.menuOpen || GrabView.isDragging || line.pressedID != nil || now < peekUntil
         if inside || busy {
             awaySince = nil
         } else {
@@ -426,15 +498,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     /// The panel spans the whole width of the screen, so it only accepts the
-    /// mouse while the cursor is over a photo. Everywhere else, clicks go to
-    /// whatever is underneath.
+    /// mouse while the cursor is over a photo, the paper tag or the hint.
+    /// Everywhere else, clicks go to whatever is underneath.
     private func updateMousePassThrough(_ mouse: NSPoint) {
-        guard !GrabView.isDragging else { return }
+        guard !GrabView.isDragging, !line.menuOpen else { return }
         let local = panel.convertPoint(fromScreen: mouse)
         let flipped = CGPoint(x: local.x, y: panel.frame.height - local.y)
-        let overPhoto = line.hitRects.values.contains { $0.insetBy(dx: -4, dy: -4).contains(flipped) }
-        if panel.ignoresMouseEvents == overPhoto {
-            panel.ignoresMouseEvents = !overPhoto
+        let overSomething = line.hitRects.values.contains { $0.insetBy(dx: -4, dy: -4).contains(flipped) }
+            || line.extraHitRects.contains { $0.contains(flipped) }
+            || Layout.isNearRope(flipped, width: panel.frame.width)
+        if panel.ignoresMouseEvents == overSomething {
+            panel.ignoresMouseEvents = !overSomething
         }
     }
 
@@ -447,16 +521,59 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func setUpStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        let image = NSImage(systemSymbolName: "tshirt", accessibilityDescription: "Snapline")
-        image?.isTemplate = true
+        let image = Self.statusImage()
         statusItem.button?.image = image
+        statusItem.button?.toolTip = "Snapline"
         let menu = NSMenu()
         menu.delegate = self
         statusItem.menu = menu
     }
 
+    /// The capture-frame mark as a template image, so it follows the menu bar's tone.
+    private static func statusImage() -> NSImage {
+        if let url = Bundle.main.url(forResource: "MenuBar", withExtension: "png"), let img = NSImage(contentsOf: url) {
+            img.isTemplate = true
+            img.size = NSSize(width: 18, height: 18)
+            return img
+        }
+        let fallback = NSImage(systemSymbolName: "camera.viewfinder", accessibilityDescription: "Snapline")!
+        fallback.isTemplate = true
+        return fallback
+    }
+
+    /// The same menu as the status item, popped up at the pointer when the
+    /// paper tag on the line is clicked.
+    private func popMenu() {
+        guard let menu = statusItem.menu else { return }
+        menuNeedsUpdate(menu)
+        line.menuOpen = true
+        panel.ignoresMouseEvents = false
+        menu.popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
+        line.menuOpen = false
+    }
+
     func menuNeedsUpdate(_ menu: NSMenu) {
         menu.removeAllItems()
+
+        menu.addItem(ClosureMenuItem(L("New capture"), key: "n") {
+            Capture.snip()
+        })
+
+        let notes = NSMenu()
+        for key in Notes.colors {
+            let item = ClosureMenuItem(L(Notes.name(key))) { [weak self] in
+                guard let self else { return }
+                self.showLine()
+                self.line.newNote(color: key)
+            }
+            item.image = Notes.swatch(key)
+            notes.addItem(item)
+        }
+        let noteItem = NSMenuItem(title: L("New note"), action: nil, keyEquivalent: "")
+        noteItem.submenu = notes
+        menu.addItem(noteItem)
+
+        menu.addItem(.separator())
 
         let toggleItem = ClosureMenuItem(isRevealed ? L("Hide line") : L("Show line")) { [weak self] in
             self?.toggle()
@@ -471,12 +588,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         clearItem.isEnabled = line.liveCount > 0
         menu.addItem(clearItem)
 
+        menu.addItem(.separator())
+
         let inbox = ClosureMenuItem(L("Handle screenshots")) { [weak self] in
             self?.setInbox(!Inbox.isEnabled)
         }
         inbox.state = Inbox.isEnabled ? .on : .off
         inbox.toolTip = L("Screenshots hang instantly and skip the Desktop")
         menu.addItem(inbox)
+
+        let clip = ClosureMenuItem(L("Catch clipboard captures")) { [weak self] in
+            Settings.current.catchClipboard.toggle()
+            Settings.save()
+            self?.clipboard.enabled = Settings.current.catchClipboard
+        }
+        clip.state = Settings.current.catchClipboard ? .on : .off
+        clip.toolTip = L("Cmd+Ctrl+Shift+4 copies instead of saving; those hang too")
+        menu.addItem(clip)
+
+        let stay = ClosureMenuItem(L("Stay down until each capture is used")) {
+            Settings.current.stayDownWhileUnused.toggle()
+            Settings.save()
+        }
+        stay.state = Settings.current.stayDownWhileUnused ? .on : .off
+        menu.addItem(stay)
+
+        let takeDown = ClosureMenuItem(L("Take down after dragging into an app")) {
+            Settings.current.takeDownAfterDrag.toggle()
+            Settings.save()
+        }
+        takeDown.state = Settings.current.takeDownAfterDrag ? .on : .off
+        menu.addItem(takeDown)
 
         menu.addItem(ClosureMenuItem(L("Open screenshots folder")) { [weak self] in
             guard let self else { return }
@@ -492,31 +634,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         sound.state = line.soundOn ? .on : .off
         menu.addItem(sound)
 
-        let login = ClosureMenuItem(L("Open at login")) {
-            AppDelegate.toggleLaunchAtLogin()
-        }
-        login.state = SMAppService.mainApp.status == .enabled ? .on : .off
-        menu.addItem(login)
+        menu.addItem(ClosureMenuItem(L("Settings…"), key: ",") {
+            SettingsWindow.show()
+        })
 
         menu.addItem(.separator())
         menu.addItem(ClosureMenuItem(L("Quit Snapline"), key: "q") {
             NSApp.terminate(nil)
         })
-    }
-
-    private static func toggleLaunchAtLogin() {
-        do {
-            if SMAppService.mainApp.status == .enabled {
-                try SMAppService.mainApp.unregister()
-            } else {
-                try SMAppService.mainApp.register()
-            }
-        } catch {
-            let alert = NSAlert()
-            alert.messageText = L("Could not change the login setting")
-            alert.informativeText = L("Move Snapline to the Applications folder and try again.")
-            NSApp.activate(ignoringOtherApps: true)
-            alert.runModal()
-        }
     }
 }

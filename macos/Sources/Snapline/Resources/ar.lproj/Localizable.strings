@@ -1,0 +1,105 @@
+/* Arabic. Each key is the English text exactly as written in L("...") in the code. */
+
+/* AppDelegate */
+"Let Snapline handle your screenshots?" = "هل تريد أن يتولى Snapline لقطات الشاشة؟";
+"Screenshots will hang on the line the instant you take them, without the floating thumbnail, and will not pile up on your Desktop. Drag one to a folder to keep it, or discard it with the cross. You can turn this off from the menu bar, and your settings come back when Snapline quits." = "ستُعلَّق لقطات الشاشة على الحبل فور التقاطها، بدون الصورة المصغّرة العائمة، ولن تتراكم على سطح المكتب. اسحب لقطة إلى مجلد للاحتفاظ بها، أو تخلّص منها بعلامة ×. يمكنك إيقاف ذلك من شريط القوائم، وتعود إعداداتك كما كانت عند إغلاق Snapline.";
+"Turn on" = "تشغيل";
+"Not now" = "ليس الآن";
+"Hide line" = "إخفاء الحبل";
+"Show line" = "إظهار الحبل";
+"Take everything down" = "إنزال كل شيء";
+"Handle screenshots" = "تولّي لقطات الشاشة";
+"Screenshots hang instantly and skip the Desktop" = "تُعلَّق اللقطات فورًا ولا تمر بسطح المكتب";
+"Open screenshots folder" = "فتح مجلد اللقطات";
+"Sounds" = "الأصوات";
+"Open at login" = "فتح عند تسجيل الدخول";
+"Quit Snapline" = "إنهاء Snapline";
+"Could not change the login setting" = "تعذّر تغيير إعداد تسجيل الدخول";
+"Move Snapline to the Applications folder and try again." = "انقل Snapline إلى مجلد التطبيقات وحاول مرة أخرى.";
+"New capture" = "لقطة جديدة";
+"New note" = "ملاحظة جديدة";
+"Settings…" = "الإعدادات…";
+"Catch clipboard captures" = "التقاط لقطات الحافظة";
+"Cmd+Ctrl+Shift+4 copies instead of saving; those hang too" = "‏Cmd+Ctrl+Shift+4 ينسخ بدل الحفظ، وهذه تُعلَّق أيضًا";
+"Stay down until each capture is used" = "يبقى الحبل ظاهرًا حتى تُستخدم كل لقطة";
+"Take down after dragging into an app" = "إنزال اللقطة بعد سحبها إلى تطبيق";
+
+/* GrabArea */
+"Copy" = "نسخ";
+"Copy text" = "نسخ النص";
+"Open" = "فتح";
+"Mark up" = "تعليم";
+"Mark up with macOS" = "تعليم بأداة macOS";
+"Show in Finder" = "إظهار في Finder";
+"Keep on the line" = "إبقاء على الحبل";
+"Save to Desktop" = "حفظ على سطح المكتب";
+"Discard" = "تخلّص";
+"Take down" = "إنزال";
+"Move to Trash" = "نقل إلى سلة المهملات";
+"Edit note" = "تحرير الملاحظة";
+"Note colour" = "لون الملاحظة";
+"Yellow" = "أصفر";
+"Pink" = "وردي";
+"Blue" = "أزرق";
+"Green" = "أخضر";
+"Orange" = "برتقالي";
+
+/* LineView */
+"Take a screenshot and it will hang here" = "التقط لقطة شاشة وستُعلَّق هنا";
+"Menu" = "القائمة";
+
+/* PeggedView */
+"Copied" = "تم النسخ";
+"Text copied" = "تم نسخ النص";
+"just now" = "الآن";
+"%d min ago" = "قبل %d دقيقة";
+"%d h ago" = "قبل %d ساعة";
+
+/* Markup */
+"Pen" = "قلم";
+"Highlighter" = "قلم تمييز";
+"Circle" = "دائرة";
+"Box" = "مربع";
+"Arrow" = "سهم";
+"Text" = "نص";
+"Blur" = "تمويه";
+"Undo" = "تراجع";
+"Redo" = "إعادة";
+"Revert to original" = "العودة إلى الأصل";
+"Back to the original" = "عدنا إلى الأصل";
+"Done" = "تم";
+"Saved" = "تم الحفظ";
+"Could not save" = "تعذّر الحفظ";
+
+/* Settings */
+"Settings" = "الإعدادات";
+"The line" = "الحبل";
+"Arrange photos evenly along the line" = "ترتيب الصور بالتساوي على الحبل";
+"Distance from the top of the screen" = "المسافة من أعلى الشاشة";
+"Look" = "المظهر";
+"Line colour" = "لون الحبل";
+"Clothespins" = "المشابك";
+"Bows at the ends of the line" = "عقدتان في طرفي الحبل";
+"Appearance" = "السمة";
+"Follow macOS" = "حسب macOS";
+"Light" = "فاتح";
+"Dark" = "داكن";
+"Language" = "اللغة";
+"Captures" = "اللقطات";
+"Caught captures are saved to" = "تُحفظ اللقطات الملتقطة في";
+"General" = "عام";
+"Changes apply right away. Everything lives in %@." = "تُطبَّق التغييرات فورًا. كل شيء محفوظ في %@.";
+"Bronze" = "برونزي";
+"Gray" = "رمادي";
+"Black" = "أسود";
+"White" = "أبيض";
+"Red" = "أحمر";
+"Gold" = "ذهبي";
+"Purple" = "بنفسجي";
+"Wooden" = "خشبية";
+"Aluminium" = "ألمنيوم";
+"Coloured plastic, mixed" = "بلاستيك ملوّن، منوّع";
+"Red plastic" = "بلاستيك أحمر";
+"Blue plastic" = "بلاستيك أزرق";
+"Green plastic" = "بلاستيك أخضر";
+"Yellow plastic" = "بلاستيك أصفر";

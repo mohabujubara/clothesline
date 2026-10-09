@@ -47,6 +47,10 @@ for s in 16 32 128 256 512; do
 done
 iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/Snapline.icns"
 rm -rf "$WORK"
+# The bare mark for the Settings header, and a small one for the menu bar
+# (used as a template image: only its shape matters).
+sips -z 128 128 "../design/mark-1024.png" --out "$APP/Contents/Resources/Mark.png" >/dev/null
+sips -z 36 36 "../design/mark-small-64.png" --out "$APP/Contents/Resources/MenuBar.png" >/dev/null
 
 # Translations: one folder per language, listed in Info.plist so macOS knows
 # which languages the app speaks.

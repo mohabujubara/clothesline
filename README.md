@@ -5,9 +5,9 @@
 <h1 align="center">Snapline</h1>
 
 <p align="center">
-  Screenshots, hung out to dry. For Windows 10 and 11.
+  Screenshots, hung out to dry. For Windows 10 and 11, and for macOS.
   <br>
-  A native port of <a href="https://github.com/alejandrobujan/tendedero">Tendedero</a> for macOS.
+  Grew out of <a href="https://github.com/alejandrobujan/tendedero">Tendedero</a> for the Mac.
 </p>
 
 <br>
@@ -136,6 +136,25 @@ Snapline runs entirely on your PC, and your screenshots never leave it.
 
 <br>
 
+## On the Mac too
+
+The same line, the same features, as a native macOS app: a floating strip that
+slides down from under the menu bar, wooden pegs on a bronze line with bows, free
+placement of the photos, the built-in markup editor, sticky notes, Copy text with
+the Vision OCR, clipboard captures caught, Arabic and English, light and dark,
+and a Settings window. It is built with Swift and SwiftUI, universal for Apple
+silicon and Intel, from macOS 14 Sonoma onwards.
+
+1. Download **Snapline-mac.dmg** (or the .zip) from the [latest release](https://github.com/mohabujubara/snapline/releases/latest) and drag Snapline into Applications.
+2. The first time, macOS says the app "cannot be opened because the developer cannot be verified", because it is not notarized yet. **Right-click the app and choose Open**, then Open again. On macOS 15 and later, open *System Settings → Privacy & Security* and click *Open Anyway* instead. That is needed once.
+3. Snapline lives in the menu bar. Press **⌃⌥T** to show or hide the line, or move the pointer against the top edge of the screen.
+
+Snapline offers once to handle your screenshots: they then hang on the line the
+instant you take them, without the floating thumbnail, and do not pile up on the
+Desktop. Your screenshot settings come back the moment Snapline quits.
+
+<br>
+
 ## Install
 
 1. Download **Snapline-Setup.exe** from the [latest release](https://github.com/mohabujubara/snapline/releases/latest) and run it.
@@ -151,6 +170,8 @@ There is also a much smaller build, `Snapline.exe`, for PCs that already have th
 <br>
 
 ## Build from source
+
+Windows:
 
 ```powershell
 git clone https://github.com/mohabujubara/snapline.git

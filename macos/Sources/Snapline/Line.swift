@@ -14,9 +14,20 @@ struct Pegged: Identifiable, Equatable {
     var falling = false
     /// Still flying in from where it was captured; the card waits hidden.
     var flying = false
+    /// Copied, dragged out, opened or edited at least once. Restored photos count as used.
+    var used = false
+    /// Kept on purpose: never pushed off by newer captures.
+    var pinned = false
+    /// Where it hangs along the line, as a fraction of the width, when photos are not arranged automatically.
+    var spot: Double?
+    let hungAt = Date()
+
+    var isNote: Bool { Notes.isNote(url) }
+    /// A stable number for this photo, so a mixed peg keeps its colour.
+    var seed: Int { url.path.unicodeScalars.reduce(17) { ($0 &* 31) &+ Int($1.value) } }
 
     static func == (a: Pegged, b: Pegged) -> Bool {
-        a.id == b.id && a.falling == b.falling && a.flying == b.flying && a.thumb === b.thumb
+        a.id == b.id && a.falling == b.falling && a.flying == b.flying && a.thumb === b.thumb && a.pinned == b.pinned && a.spot == b.spot
     }
 }
 
@@ -27,31 +38,42 @@ final class Line: ObservableObject {
     @Published private(set) var items: [Pegged] = []
     @Published private(set) var gust = 0
     @Published var copiedID: UUID?
+    /// What the badge under the card says: "Copied", or "Text copied".
+    @Published var copiedLabel = L("Copied")
     @Published var draggingID: UUID?
     @Published var pressedID: UUID?
     /// Whether the line has slid down into view.
     @Published var revealed = false
+    /// Bumped when the look changes in Settings, so views redraw.
+    @Published var look = 0
+    /// A context menu is open: clicks belong to it, not to the window underneath.
+    var menuOpen = false
 
-    /// Card frames in window coordinates, reported by the views. The panel
-    /// uses them to only catch clicks over photos and let the rest through.
+    /// Card frames in window coordinates, reported by the views.
     var hitRects: [UUID: CGRect] = [:]
+    /// The paper tag and the rope, when they take the mouse.
+    var extraHitRects: [CGRect] = []
 
     var maxItems = 8
-
+    let persist: Bool
 
     var soundOn: Bool {
-        get { !UserDefaults.standard.bool(forKey: "soundOff") }
-        set { UserDefaults.standard.set(!newValue, forKey: "soundOff") }
+        get { Settings.current.soundOn }
+        set { Settings.current.soundOn = newValue; Settings.save() }
     }
 
     var liveCount: Int { items.filter { !$0.falling }.count }
+    /// Whether something hangs that has not been copied, dragged out or opened yet.
+    var hasUnused: Bool { items.contains { !$0.falling && !$0.used } }
 
-    private let storeKey = "pegged"
-
-    init() {
-        restore()
+    init(persist: Bool = true) {
+        self.persist = persist
+        if persist { restore() }
         scheduleGust()
     }
+
+    func index(of id: UUID) -> Int? { items.firstIndex { $0.id == id } }
+    func item(_ id: UUID) -> Pegged? { items.first { $0.id == id } }
 
     // MARK: Hanging and dropping
 
@@ -62,8 +84,8 @@ final class Line: ObservableObject {
         var item = Pegged(url: url, thumb: thumb)
         item.flying = flying
         items.append(item)
-        // A full line lets the oldest photo fall off the far end.
-        while liveCount > maxItems, let oldest = items.first(where: { !$0.falling }) {
+        // A full line lets the oldest photo fall off the far end. Kept photos stay.
+        while liveCount > maxItems, let oldest = items.first(where: { !$0.falling && !$0.pinned }) {
             drop(oldest.id, quietly: true)
         }
         save()
@@ -73,16 +95,15 @@ final class Line: ObservableObject {
 
     /// The capture has reached the line: the real card takes over.
     func land(_ id: UUID) {
-        guard let i = items.firstIndex(where: { $0.id == id }) else { return }
+        guard let i = index(of: id) else { return }
         items[i].flying = false
     }
 
-    /// Called just before a photo starts falling, so the fall can be drawn
-    /// over the whole screen.
+    /// Called just before a photo starts falling, so the fall can be drawn over the whole screen.
     var onFall: ((Pegged) -> Void)?
 
     func drop(_ id: UUID, quietly: Bool = false) {
-        guard let i = items.firstIndex(where: { $0.id == id }), !items[i].falling else { return }
+        guard let i = index(of: id), !items[i].falling else { return }
         onFall?(items[i])
         items[i].falling = true
         hitRects[id] = nil
@@ -105,40 +126,111 @@ final class Line: ObservableObject {
     /// Photos whose file was deleted or moved away fall off by themselves.
     func prune() {
         for item in items where !item.falling && !FileManager.default.fileExists(atPath: item.url.path) {
+            Notes.forget(item.url)
             drop(item.id, quietly: true)
         }
+    }
+
+    // MARK: Placing
+
+    /// Moves a photo to another place on the line. `liveIndex` counts only photos that are not falling.
+    func move(_ id: UUID, to liveIndex: Int) {
+        guard let from = index(of: id) else { return }
+        let item = items[from]
+        var live = items.filter { !$0.falling && $0.id != id }
+        let target = max(0, min(liveIndex, live.count))
+        items.remove(at: from)
+        if target < live.count, let at = items.firstIndex(where: { $0.id == live[target].id }) {
+            items.insert(item, at: at)
+        } else {
+            items.append(item)
+        }
+        live = []
+        save()
+    }
+
+    /// Remembers where a photo was put by hand.
+    func setSpot(_ id: UUID, _ fraction: Double, save persistNow: Bool) {
+        guard let i = index(of: id) else { return }
+        items[i].spot = max(0, min(1, fraction))
+        if persistNow { save() }
+    }
+
+    /// Keeps a photo on the line: newer captures never push it off.
+    func togglePin(_ id: UUID) {
+        guard let i = index(of: id) else { return }
+        items[i].pinned.toggle()
+        save()
     }
 
     // MARK: Actions on one photo
 
     func copy(_ id: UUID) {
-        guard let item = items.first(where: { $0.id == id }) else { return }
+        guard let i = index(of: id) else { return }
+        items[i].used = true
+        let item = items[i]
         let entry = NSPasteboardItem()
         if let png = pngData(item.url) { entry.setData(png, forType: .png) }
         entry.setString(item.url.absoluteString, forType: .fileURL)
+        if let note = Notes.get(item.url), !note.text.isEmpty { entry.setString(note.text, forType: .string) }
         let pb = NSPasteboard.general
         pb.clearContents()
         pb.writeObjects([entry])
-
+        copiedLabel = L("Copied")
         copiedID = id
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
             if self?.copiedID == id { self?.copiedID = nil }
         }
     }
 
-    func open(_ id: UUID) {
-        guard let item = items.first(where: { $0.id == id }) else { return }
-        NSWorkspace.shared.open(item.url)
+    /// Reads the text in the screenshot with Vision and puts it on the clipboard.
+    func copyText(_ id: UUID) {
+        guard let i = index(of: id) else { return }
+        items[i].used = true
+        let url = items[i].url
+        Task { @MainActor in
+            let text = await Ocr.read(url)
+            guard let text, !text.isEmpty else { NSSound.beep(); return }
+            let pb = NSPasteboard.general
+            pb.clearContents()
+            pb.setString(text, forType: .string)
+            self.copiedLabel = L("Text copied")
+            self.copiedID = id
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) { [weak self] in
+                if self?.copiedID == id { self?.copiedID = nil }
+            }
+        }
     }
 
-    /// Moves the file to the Trash and takes the photo off the line. When a
-    /// drag ends on the Dock's Trash, macOS only reports it: deleting the file
-    /// is the source app's job, as Finder does.
+    func open(_ id: UUID) {
+        guard let i = index(of: id) else { return }
+        items[i].used = true
+        if items[i].isNote { editNote(id) } else { NSWorkspace.shared.open(items[i].url) }
+    }
+
+    /// Press and hold: the photo opens enlarged with a pen. A note opens its little window.
+    func markup(_ id: UUID) {
+        guard let i = index(of: id) else { return }
+        items[i].used = true
+        if items[i].isNote { NoteWindow.show(items[i].url, line: self) }
+        else { MarkupWindow.show(items[i].url, line: self) }
+    }
+
+    /// The system Markup extension, the one macOS shows for a fresh screenshot.
+    func markupWithSystem(_ id: UUID) {
+        guard let item = item(id) else { return }
+        Markup.shared.edit(item.url)
+    }
+
+    /// Moves the file to the Trash and takes the photo off the line.
     func trash(_ id: UUID) {
-        guard let item = items.first(where: { $0.id == id }) else { return }
+        guard let item = item(id) else { return }
         do {
-            try FileManager.default.trashItem(at: item.url, resultingItemURL: nil)
+            if FileManager.default.fileExists(atPath: item.url.path) {
+                try FileManager.default.trashItem(at: item.url, resultingItemURL: nil)
+            }
             log.notice("Trashed \(item.url.lastPathComponent, privacy: .public)")
+            Notes.forget(item.url)
             if soundOn { Line.trashSound?.play() }
             drop(id, quietly: true)
         } catch {
@@ -151,11 +243,9 @@ final class Line: ObservableObject {
         contentsOfFile: "/System/Library/Components/CoreAudio.component/Contents/SharedSupport/SystemSounds/dock/drag to trash.aif",
         byReference: true)
 
-    /// Whether the file lives in Snapline's own folder. Those are discarded
-    /// to the Trash, or the folder would fill up with forgotten screenshots.
-    /// Files anywhere else, like the Desktop, stay where they are.
+    /// Whether the file lives in Snapline's own folder. Those are discarded to the Trash.
     func isInInbox(_ id: UUID) -> Bool {
-        guard let item = items.first(where: { $0.id == id }) else { return false }
+        guard let item = item(id) else { return false }
         return item.url.standardizedFileURL.path.hasPrefix(Inbox.folder.standardizedFileURL.path + "/")
     }
 
@@ -166,11 +256,12 @@ final class Line: ObservableObject {
 
     /// Inbox mode: keep a screenshot by moving it to the Desktop.
     func saveToDesktop(_ id: UUID) {
-        guard let item = items.first(where: { $0.id == id }) else { return }
+        guard let item = item(id) else { return }
         let desktop = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Desktop")
         let target = uniqueURL(in: desktop, for: item.url.lastPathComponent)
         do {
             try FileManager.default.moveItem(at: item.url, to: target)
+            Notes.forget(item.url)
             drop(id, quietly: true)
         } catch {
             log.error("Could not save to Desktop: \(error.localizedDescription, privacy: .public)")
@@ -190,12 +281,6 @@ final class Line: ObservableObject {
         return candidate
     }
 
-    /// Long press: open the photo in the system Markup editor.
-    func markup(_ id: UUID) {
-        guard let item = items.first(where: { $0.id == id }) else { return }
-        Markup.shared.edit(item.url)
-    }
-
     /// After editing, the photo on the line shows the new version.
     func reloadThumbnail(for url: URL) {
         guard let i = items.firstIndex(where: { $0.url == url && !$0.falling }),
@@ -204,8 +289,33 @@ final class Line: ObservableObject {
     }
 
     func reveal(_ id: UUID) {
-        guard let item = items.first(where: { $0.id == id }) else { return }
+        guard let item = item(id) else { return }
         NSWorkspace.shared.activateFileViewerSelecting([item.url])
+    }
+
+    // MARK: Sticky notes
+
+    /// A new sticky note hangs on the line, ready to be written on.
+    @discardableResult
+    func newNote(color: String = "yellow") -> UUID? {
+        let url = Notes.create(color: color)
+        guard let id = hang(url) else { return nil }
+        NoteWindow.show(url, line: self)
+        return id
+    }
+
+    func isNote(_ id: UUID) -> Bool { item(id)?.isNote ?? false }
+
+    func editNote(_ id: UUID) {
+        guard let i = index(of: id), items[i].isNote else { return }
+        items[i].used = true
+        NoteWindow.show(items[i].url, line: self)
+    }
+
+    func recolourNote(_ id: UUID, _ color: String) {
+        guard let item = item(id), let data = Notes.get(item.url) else { return }
+        Notes.update(item.url, text: data.text, color: color)
+        reloadThumbnail(for: item.url)
     }
 
     // MARK: Breeze
@@ -223,21 +333,30 @@ final class Line: ObservableObject {
     // MARK: Persistence
 
     private func save() {
-        let paths = items.filter { !$0.falling }.map(\.url.path)
-        UserDefaults.standard.set(paths, forKey: storeKey)
+        guard persist else { return }
+        let live = items.filter { !$0.falling }
+        Settings.current.pegged = live.map(\.url.path)
+        Settings.current.pinnedPaths = live.filter(\.pinned).map(\.url.path)
+        var spots: [String: Double] = [:]
+        for item in live { if let s = item.spot { spots[item.url.path] = s } }
+        Settings.current.spots = spots
+        Settings.save()
     }
 
     private func restore() {
-        let paths = UserDefaults.standard.stringArray(forKey: storeKey) ?? []
-        for path in paths where FileManager.default.fileExists(atPath: path) {
-            hang(URL(fileURLWithPath: path), quietly: true)
+        for path in Settings.current.pegged where FileManager.default.fileExists(atPath: path) {
+            if let id = hang(URL(fileURLWithPath: path), quietly: true), let i = index(of: id) {
+                items[i].used = true
+                items[i].pinned = Settings.current.pinnedPaths.contains(path)
+                items[i].spot = Settings.current.spots[path]
+            }
         }
     }
 
     // MARK: Helpers
 
-    private func play(_ name: String, volume: Float) {
-        guard soundOn, let sound = NSSound(named: name)?.copy() as? NSSound else { return }
+    func play(_ name: String, volume: Float) {
+        guard soundOn, persist, let sound = NSSound(named: name)?.copy() as? NSSound else { return }
         sound.volume = volume
         sound.play()
     }
@@ -259,4 +378,12 @@ func makeThumbnail(_ url: URL, maxPixels: Int = 480) -> NSImage? {
     ]
     guard let cg = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return nil }
     return NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height))
+}
+
+/// The size of the picture in pixels, without decoding it.
+func pixelSize(_ url: URL) -> CGSize? {
+    guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+          let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+          let w = props[kCGImagePropertyPixelWidth] as? CGFloat, let h = props[kCGImagePropertyPixelHeight] as? CGFloat else { return nil }
+    return CGSize(width: w, height: h)
 }

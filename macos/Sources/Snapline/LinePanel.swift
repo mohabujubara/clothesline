@@ -34,7 +34,9 @@ final class LinePanel: NSPanel {
 
     func placeOnScreen(_ screen: NSScreen? = nil) {
         guard let visible = (screen ?? LinePanel.screenUnderPointer())?.visibleFrame else { return }
-        let target = NSRect(x: visible.minX, y: visible.maxY - Layout.panelHeight,
+        // Settings can push the line down a little, for a menu bar that must stay reachable.
+        let offset = CGFloat(max(0, min(200, Settings.current.lineOffset)))
+        let target = NSRect(x: visible.minX, y: visible.maxY - Layout.panelHeight - offset,
                             width: visible.width, height: Layout.panelHeight)
         if frame != target { setFrame(target, display: true) }
     }

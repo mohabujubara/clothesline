@@ -10,7 +10,9 @@ enum Snapshot {
         let app = NSApplication.shared
         app.setActivationPolicy(.prohibited)
 
-        let line = Line()
+        // A render never touches the settings file.
+        Settings.readOnly = true
+        let line = Line(persist: false)
         for path in images {
             _ = line.hang(URL(fileURLWithPath: path), quietly: true)
         }
