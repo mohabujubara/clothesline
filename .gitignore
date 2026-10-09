@@ -3,3 +3,7 @@ obj/
 dist/
 *.user
 .vs/
+
+macos/.build/
+macos/build/
+out-mac/

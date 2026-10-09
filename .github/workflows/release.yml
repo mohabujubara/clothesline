@@ -55,3 +55,37 @@ jobs:
             **Snapline-*.exe** is the small build and needs the [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0).
 
             The app is not code-signed yet, so SmartScreen may show "Windows protected your PC" the first time. Click *More info*, then *Run anyway*.
+
+  mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the app
+        working-directory: macos
+        run: |
+          swift --version
+          VERSION=0.0.0
+          [[ "$GITHUB_REF" == refs/tags/v* ]] && VERSION="${GITHUB_REF_NAME#v}"
+          export VERSION
+          scripts/make-dmg.sh
+          mkdir -p ../out-mac
+          cp build/Snapline-*.zip build/Snapline-*.dmg ../out-mac/
+
+      - name: Render a snapshot of the line
+        working-directory: macos
+        run: |
+          build/Snapline.app/Contents/MacOS/Snapline --snapshot ../out-mac/snapshot.png ../docs/samples/arabic-site.png ../docs/samples/yahoo.png ../docs/samples/arabic-dashboard.png
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Snapline-mac
+          path: out-mac/*
+
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            out-mac/*.zip
+            out-mac/*.dmg
