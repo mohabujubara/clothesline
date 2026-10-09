@@ -409,18 +409,13 @@ public sealed class MarkupWindow : Window
 
     // MARK: Saving
 
-    private static string OriginalsFolder => System.IO.Path.Combine(Settings.Folder, "Originals");
-
-    private string BackupPath => System.IO.Path.Combine(OriginalsFolder, System.IO.Path.GetFileName(_path));
-
     private void Save()
     {
         if (!_dirty) return;
         try
         {
             // The untouched picture is kept once, so Revert is always possible.
-            Directory.CreateDirectory(OriginalsFolder);
-            if (!File.Exists(BackupPath)) File.Copy(_path, BackupPath);
+            Originals.Keep(_path);
 
             int pw = _image.PixelWidth, ph = _image.PixelHeight;
             CommitText();
@@ -463,12 +458,7 @@ public sealed class MarkupWindow : Window
         _redo.Clear();
         try
         {
-            if (File.Exists(BackupPath))
-            {
-                File.Copy(BackupPath, _path, true);
-                File.Delete(BackupPath);
-                _line.ReloadThumbnail(_path);
-            }
+            if (Originals.Revert(_path)) _line.ReloadThumbnail(_path);
             // The editor keeps showing the picture it opened with, which is the original if it was never marked before.
             var fresh = Thumbnails.Load(_path, int.MaxValue, 3);
             if (fresh is not null) ((Image)((Border)_page.Children[0]).Child).Source = fresh.Value.Image;
@@ -497,7 +487,7 @@ public sealed class MarkupWindow : Window
             w.Commit(circle);
             w._saveTimer.Stop();
             w.Save();
-            bool savedOnce = !w._dirty && File.Exists(w.BackupPath);
+            bool savedOnce = !w._dirty && Originals.Exists(w._path);
             w.Undo();
             w._saveTimer.Stop();
             w.Save();

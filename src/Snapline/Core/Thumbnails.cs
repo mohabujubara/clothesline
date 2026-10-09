@@ -44,9 +44,10 @@ public static class Thumbnails
                 image.Freeze();
                 return new Thumbnail(image, w, h);
             }
-            catch (Exception e) when (i < attempts - 1 && e is IOException or UnauthorizedAccessException or NotSupportedException or FileFormatException)
+            catch (Exception e) when (i < attempts - 1 && (e is IOException or UnauthorizedAccessException || (i < 2 && e is NotSupportedException or FileFormatException)))
             {
-                // The capture is still being written. Give it a moment.
+                // The capture is still being written. Give it a moment. A format
+                // Windows cannot decode at all gets two tries, not eight.
                 Thread.Sleep(80 + i * 40);
             }
             catch (Exception e)

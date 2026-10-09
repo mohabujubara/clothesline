@@ -56,6 +56,7 @@ public sealed class AppController : IDisposable
     {
         OleInitialize(IntPtr.Zero);
         Shell.MigrateStartup();
+        Originals.Sweep(_line.Items.Select(i => i.Path));
         Theme.ApplySetting();
         Theme.Apply();
         Strings.Refresh();

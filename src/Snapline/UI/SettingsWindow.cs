@@ -133,7 +133,16 @@ public sealed class SettingsWindow : Window
         change.Click += (_, _) =>
         {
             var dialog = new Microsoft.Win32.OpenFolderDialog { Title = Strings.OpenInboxFolder, InitialDirectory = Inbox.Folder };
-            if (dialog.ShowDialog(this) == true) { s.InboxFolder = dialog.FolderName; Changed(); _inbox.Text = Inbox.Folder; }
+            if (dialog.ShowDialog(this) != true) return;
+            var guarded = new List<string> { Shell.ScreenshotsFolder(), Shell.Desktop(),
+                Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) };
+            guarded.AddRange(s.WatchFolders.Select(Environment.ExpandEnvironmentVariables));
+            if (!Inbox.IsSafeFolder(dialog.FolderName, guarded))
+            {
+                MessageBox.Show(this, Strings.InboxFolderRefused, Strings.AppName, MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+            s.InboxFolder = dialog.FolderName; Changed(); _inbox.Text = Inbox.Folder;
         };
         inboxRow.Children.Add(change);
         _inbox = new TextBlock { Text = Inbox.Folder, TextTrimming = TextTrimming.CharacterEllipsis, Opacity = 0.7, FlowDirection = FlowDirection.LeftToRight, HorizontalAlignment = Strings.IsRtl ? HorizontalAlignment.Right : HorizontalAlignment.Left };

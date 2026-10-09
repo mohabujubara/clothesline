@@ -127,7 +127,7 @@ struct PeggedView: View {
 
     private var tooltip: String {
         let name = item.url.lastPathComponent
-        let size = pixelSize(item.url).map { "\(Int($0.width)) × \(Int($0.height))" } ?? ""
+        let size = item.pixels.map { "\(Int($0.width)) × \(Int($0.height))" } ?? ""
         return "\(name)\n\(size)  ·  \(age(item.hungAt))\(item.pinned ? "  ·  " + L("Keep on the line") : "")"
     }
 

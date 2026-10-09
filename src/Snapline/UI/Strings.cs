@@ -75,7 +75,7 @@ public static class Strings
     public static string Menu => L("Menu");
     public static string EditNote => L("Edit note");
     public static string NoteColour => L("Note colour");
-    public static string NotePlaceholder => L("Write a note2026");
+    public static string NotePlaceholder => L("Write a note…");
     public static string NoteName(string key) => L(key switch { "yellow" => "Yellow", "pink" => "Pink", "blue" => "Blue", "green" => "Green", "orange" => "Orange", _ => key });
     public static string Colour => L("Colour");
     public static string Thickness => L("Thickness");
@@ -122,6 +122,7 @@ public static class Strings
     public static string Dark => L("Dark");
     public static string CaughtCapturesFolder => L("Caught captures are saved to");
     public static string Change => L("Change…");
+    public static string InboxFolderRefused => L("Caught captures need a folder of their own, because discarding one sends it to the Recycle Bin. Pick a folder that is not your Desktop, Pictures, Screenshots or a watched folder, and not a parent of them.");
     public static string WatchFoldersLabel => L("Folders watched for new screenshots");
     public static string AddFolder => L("Add folder…");
     public static string RemoveFolder => L("Remove");
@@ -166,6 +167,7 @@ public static class Strings
         ["Hold the pointer still against the top of the screen for half a second. Off, the shortcut and the tray icon show the line."] = "ثبّت المؤشر عند أعلى الشاشة نصف ثانية. عند الإيقاف، يُظهر الحبلَ الاختصارُ وأيقونةُ شريط المهام.",
         ["Open Screenshots folder"] = "فتح مجلد لقطات الشاشة",
         ["Open caught captures folder"] = "فتح مجلد اللقطات الملتقطة",
+        ["Caught captures need a folder of their own, because discarding one sends it to the Recycle Bin. Pick a folder that is not your Desktop, Pictures, Screenshots or a watched folder, and not a parent of them."] = "تحتاج اللقطات الملتقطة إلى مجلد خاص بها، لأن التخلص من لقطة يرسلها إلى سلة المحذوفات. اختر مجلدًا ليس سطح المكتب ولا الصور ولا لقطات الشاشة ولا مجلدًا مراقبًا، وليس مجلدًا يحتويها.",
         ["Sounds"] = "الأصوات",
         ["Start with Windows"] = "التشغيل مع Windows",
         ["Settings…"] = "الإعدادات…",

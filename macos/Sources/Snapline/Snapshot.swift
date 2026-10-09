@@ -13,6 +13,7 @@ enum Snapshot {
         // A render never touches the settings file.
         Settings.readOnly = true
         let line = Line(persist: false)
+        line.layoutWidth = 1400
         for path in images {
             _ = line.hang(URL(fileURLWithPath: path), quietly: true)
         }

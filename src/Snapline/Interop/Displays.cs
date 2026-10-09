@@ -65,7 +65,7 @@ public static class Displays
 
     public static Display? Containing(POINT p) => FromHandle(MonitorFromPoint(p, MONITOR_DEFAULTTONULL));
 
-    public static Display Nearest(POINT p) => FromHandle(MonitorFromPoint(p, MONITOR_DEFAULTTONEAREST))!;
+    public static Display Nearest(POINT p) => FromHandle(MonitorFromPoint(p, MONITOR_DEFAULTTONEAREST)) ?? Primary();
 
     public static Display? OfWindow(IntPtr hwnd) => FromHandle(MonitorFromWindow(hwnd, MONITOR_DEFAULTTONULL));
 

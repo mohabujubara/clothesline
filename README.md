@@ -69,9 +69,11 @@ page or a document, which brings text along, is left alone.
 Caught captures are the only files Snapline ever deletes. Discard one and it goes to the
 Recycle Bin. Drag it to a folder, or choose *Save to Desktop*, to keep it. Screenshots from
 `Pictures\Screenshots` or anywhere else stay where they are; taking one down only takes it
-off the line.
+off the line. While a photo hangs, the version you had before marking it up is kept in
+`%LOCALAPPDATA%\Snapline\Originals` for *Revert to original*, and removed when the photo
+comes down.
 
-Using ShareX, Greenshot or something else? Add its folder to `watchFolders` in the settings file.
+Using ShareX, Greenshot or something else? Add its folder in Settings.
 
 <br>
 
@@ -118,7 +120,8 @@ Both are off by default, so the line behaves like Tendedero until you say otherw
 
 ## Private by design.
 
-No account. No network. No analytics. No changes to your system settings.
+No account. No network. No analytics. No changes to your system settings (on the Mac, only
+the screenshot folder, only if you say yes, and put back when Snapline quits).
 Snapline runs entirely on your PC, and your screenshots never leave it.
 
 <br>
@@ -145,26 +148,38 @@ the Vision OCR, clipboard captures caught, Arabic and English, light and dark,
 and a Settings window. It is built with Swift and SwiftUI, universal for Apple
 silicon and Intel, from macOS 14 Sonoma onwards.
 
-1. Download **Snapline-mac.dmg** (or the .zip) from the [latest release](https://github.com/mohabujubara/snapline/releases/latest) and drag Snapline into Applications.
-2. The first time, macOS says the app "cannot be opened because the developer cannot be verified", because it is not notarized yet. **Right-click the app and choose Open**, then Open again. On macOS 15 and later, open *System Settings → Privacy & Security* and click *Open Anyway* instead. That is needed once.
+1. Download **Snapline-1.x.x.dmg** (or the .zip) from the [latest release](https://github.com/mohabujubara/snapline/releases/latest) and drag Snapline into Applications.
+2. The first time, macOS refuses to open it, because the app is not notarized yet. Double-click it once and dismiss the message, then open *System Settings → Privacy & Security*, scroll down and click **Open Anyway**, then confirm. On macOS 14, right-clicking the app and choosing *Open* works too. If macOS says the app "is damaged", run this once in Terminal and try again:
+   ```bash
+   xattr -dr com.apple.quarantine /Applications/Snapline.app
+   ```
 3. Snapline lives in the menu bar. Press **⌃⌥T** to show or hide the line, or move the pointer against the top edge of the screen.
 
 Snapline offers once to handle your screenshots: they then hang on the line the
 instant you take them, without the floating thumbnail, and do not pile up on the
-Desktop. Your screenshot settings come back the moment Snapline quits.
+Desktop. Your screenshot settings come back the moment Snapline quits, or at the next
+launch if it was ever force-quit. To put them back by hand after deleting the app:
+```bash
+defaults delete com.apple.screencapture location; defaults delete com.apple.screencapture show-thumbnail
+```
+
+*New capture* runs the system screenshot tool, so macOS asks once for Screen Recording
+permission for Snapline. *Catch clipboard captures* is off by default on the Mac: when on,
+any picture you copy with nothing else beside it is saved to Snapline's folder and hung,
+and newer versions of macOS may ask before Snapline reads the clipboard.
 
 <br>
 
 ## Install
 
-1. Download **Snapline-Setup.exe** from the [latest release](https://github.com/mohabujubara/snapline/releases/latest) and run it.
+1. Download **Snapline-1.x.x-Setup.exe** from the [latest release](https://github.com/mohabujubara/snapline/releases/latest) and run it.
 2. Snapline lives in the notification area, next to the clock. Tick *Start Snapline when I sign in* in Setup, or later in Settings.
 
 The first time, SmartScreen may say "Windows protected your PC" because the app is not
 code-signed yet. Click *More info*, then *Run anyway*.
 
-Prefer not to install? **Snapline-portable.exe** runs from anywhere with nothing to set up.
-There is also a much smaller build, `Snapline.exe`, for PCs that already have the
+Prefer not to install? **Snapline-1.x.x-portable.exe** runs from anywhere with nothing to set up.
+There is also a much smaller build, **Snapline-1.x.x.exe**, for PCs that already have the
 [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0).
 
 <br>

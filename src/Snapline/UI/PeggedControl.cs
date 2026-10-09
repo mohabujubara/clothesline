@@ -283,7 +283,7 @@ public sealed class PeggedControl : Canvas
     private void RefreshTip()
     {
         _tipName.Text = System.IO.Path.GetFileName(Item.Path);
-        _tipMeta.Text = $"{Item.PixelWidth} 00d7 {Item.PixelHeight}  00b7  {Age(Item.HungAt)}{(Item.Pinned ? "  00b7  " + Strings.KeepOnLine : "")}";
+        _tipMeta.Text = $"{Item.PixelWidth} × {Item.PixelHeight}  ·  {Age(Item.HungAt)}{(Item.Pinned ? "  ·  " + Strings.KeepOnLine : "")}";
     }
 
     private static string Age(DateTime when)
@@ -608,12 +608,10 @@ public sealed class PeggedControl : Canvas
         bool accepted = effect != DragSource.DROPEFFECT_NONE;
         if (accepted) Item.Used = true;
 
-        // A plain move: the target copied the file and expects us to remove the
-        // original. Explorer does optimised moves itself, so this is rare.
-        if ((effect & DragSource.DROPEFFECT_MOVE) != 0 && System.IO.File.Exists(Item.Path))
-        {
-            try { System.IO.File.Delete(Item.Path); } catch (Exception ex) { Log.Error($"Could not finish the move: {ex.Message}"); }
-        }
+        // A target that reports a move is trusted to have done it: Explorer
+        // moves the file itself, and the line notices it is gone. Snapline
+        // never deletes a file on a drop target's word, so an app that
+        // answers "move" after merely reading the file costs nothing.
 
         // Dropped into an app and sent on its way: with the option on, it leaves the line too.
         if (accepted && Settings.Current.TakeDownAfterDrag && System.IO.File.Exists(Item.Path))

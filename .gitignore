@@ -7,3 +7,9 @@ dist/
 macos/.build/
 macos/build/
 out-mac/
+out/
+*.pfx
+*.p12
+*.snk
+.DS_Store
+.idea/

@@ -1,5 +1,8 @@
 # Builds on every push and pull request. Pushing a tag like v1.2.0 also
-# publishes a GitHub release with both executables attached.
+# publishes a GitHub release with the Windows and Mac files attached.
+#
+# The build jobs only read the repository. Only the release job, which runs
+# for version tags alone, may write to it. Actions are pinned to commits.
 name: Build
 
 on:
@@ -9,23 +12,23 @@ on:
   pull_request:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           dotnet-version: 8.0.x
 
       - name: Build
         shell: pwsh
         run: |
-          scripts/build.ps1
           $v = if ($env:GITHUB_REF -like "refs/tags/v*") { $env:GITHUB_REF.Substring(11) } else { "0.0.0" }
+          scripts/build.ps1 -Version $v
           scripts/build.ps1 -Portable -Installer -Version $v
 
       - name: Name the files
@@ -38,28 +41,15 @@ jobs:
           Copy-Item (Get-ChildItem dist/Snapline-*-Setup.exe | Select-Object -First 1).FullName "out/Snapline-$v-Setup.exe"
           Get-ChildItem out
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: Snapline
           path: out/*.exe
 
-      - name: Release
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: out/*.exe
-          generate_release_notes: true
-          body: |
-            **Snapline-*-Setup.exe** installs Snapline with a Start Menu entry and an uninstaller. Recommended.
-            **Snapline-*-portable.exe** runs on any Windows 10 or 11 PC without installing anything.
-            **Snapline-*.exe** is the small build and needs the [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0).
-
-            The app is not code-signed yet, so SmartScreen may show "Windows protected your PC" the first time. Click *More info*, then *Run anyway*.
-
   mac:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Build the app
         working-directory: macos
@@ -77,15 +67,40 @@ jobs:
         run: |
           build/Snapline.app/Contents/MacOS/Snapline --snapshot ../out-mac/snapshot.png ../docs/samples/arabic-site.png ../docs/samples/yahoo.png ../docs/samples/arabic-dashboard.png
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: Snapline-mac
           path: out-mac/*
 
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build, mac]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: Snapline
+          path: out
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: Snapline-mac
+          path: out-mac
+
       - name: Release
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           files: |
+            out/*.exe
             out-mac/*.zip
             out-mac/*.dmg
+          generate_release_notes: true
+          body: |
+            **Windows.** **Snapline-*-Setup.exe** installs Snapline with a Start Menu entry and an uninstaller. Recommended.
+            **Snapline-*-portable.exe** runs on any Windows 10 or 11 PC without installing anything.
+            **Snapline-*.exe** is the small build and needs the [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0).
+            The app is not code-signed yet, so SmartScreen may show "Windows protected your PC" the first time. Click *More info*, then *Run anyway*.
+
+            **Mac.** **Snapline-*.dmg** (or the .zip): drag Snapline into Applications. The app is not notarized yet, so macOS will refuse it once: open *System Settings → Privacy & Security* and click *Open Anyway* (on macOS 14, right-click the app and choose *Open*).

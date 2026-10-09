@@ -2,6 +2,8 @@ import AppKit
 import SwiftUI
 import CoreImage
 import CoreImage.CIFilterBuiltins
+import ImageIO
+import UniformTypeIdentifiers
 
 /// The screenshot, enlarged, with a pen in your hand. Ballpoint, highlighter,
 /// circle, box, arrow, text and blur; undo and redo; every mark is saved into
@@ -29,10 +31,13 @@ enum MarkupWindow {
         window.contentViewController = NSHostingController(rootView: MarkupView(model: model))
         window.center()
         open[url] = window
-        NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: window, queue: .main) { _ in
+        var token: NSObjectProtocol?
+        token = NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: window, queue: .main) { _ in
             MainActor.assumeIsolated {
                 model.flush()
                 open[url] = nil
+                if let token { NotificationCenter.default.removeObserver(token) }
+                token = nil
             }
         }
         window.makeKeyAndOrderFront(nil)
@@ -156,20 +161,13 @@ final class MarkupModel: ObservableObject {
 
     // MARK: Saving
 
-    private static var originals: URL { Settings.folder.appendingPathComponent("Originals", isDirectory: true) }
-    private var backup: URL { Self.originals.appendingPathComponent(url.lastPathComponent) }
-
     func save() {
         guard dirty else { return }
         do {
-            try FileManager.default.createDirectory(at: Self.originals, withIntermediateDirectories: true)
-            if !FileManager.default.fileExists(atPath: backup.path) { try FileManager.default.copyItem(at: url, to: backup) }
+            try Originals.keep(url)
             let renderer = ImageRenderer(content: MarkupPage(model: self, forExport: true).frame(width: pixels.width, height: pixels.height))
             renderer.scale = 1
-            guard let cg = renderer.cgImage else { status = L("Could not save"); return }
-            let rep = NSBitmapImageRep(cgImage: cg)
-            let isJpeg = ["jpg", "jpeg"].contains(url.pathExtension.lowercased())
-            guard let data = rep.representation(using: isJpeg ? .jpeg : .png, properties: isJpeg ? [.compressionFactor: 0.92] : [:]) else { return }
+            guard let cg = renderer.cgImage, let data = Self.encode(cg, like: url) else { status = L("Could not save"); return }
             try data.write(to: url, options: .atomic)
             dirty = false
             status = L("Saved")
@@ -180,17 +178,45 @@ final class MarkupModel: ObservableObject {
         }
     }
 
+    /// Encodes the picture in the file's own format (PNG, JPEG, HEIC or TIFF;
+    /// anything else becomes PNG bytes) and keeps its resolution, so a Retina
+    /// screenshot opens at the same size it did before.
+    private static func encode(_ image: CGImage, like url: URL) -> Data? {
+        let ext = url.pathExtension.lowercased()
+        let type: CFString
+        switch ext {
+        case "jpg", "jpeg": type = "public.jpeg" as CFString
+        case "heic", "heif": type = "public.heic" as CFString
+        case "tif", "tiff": type = "public.tiff" as CFString
+        default: type = "public.png" as CFString
+        }
+        var properties: [CFString: Any] = [:]
+        if ext == "jpg" || ext == "jpeg" { properties[kCGImageDestinationLossyCompressionQuality] = 0.92 }
+        if ext == "heic" || ext == "heif" { properties[kCGImageDestinationLossyCompressionQuality] = 0.9 }
+        if let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+           let meta = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any] {
+            if let dpi = meta[kCGImagePropertyDPIWidth] { properties[kCGImagePropertyDPIWidth] = dpi }
+            if let dpi = meta[kCGImagePropertyDPIHeight] { properties[kCGImagePropertyDPIHeight] = dpi }
+        }
+        let data = NSMutableData()
+        guard let dest = CGImageDestinationCreateWithData(data, type, 1, nil) else { return nil }
+        CGImageDestinationAddImage(dest, image, properties as CFDictionary)
+        guard CGImageDestinationFinalize(dest) else { return nil }
+        return data as Data
+    }
+
     func revert() {
         saveTask?.cancel()
         marks.removeAll(); redoStack.removeAll(); live = nil
-        if FileManager.default.fileExists(atPath: backup.path) {
-            try? FileManager.default.removeItem(at: url)
-            try? FileManager.default.copyItem(at: backup, to: url)
-            try? FileManager.default.removeItem(at: backup)
+        do {
+            try Originals.revert(url)
             line.reloadThumbnail(for: url)
+            dirty = false
+            status = L("Back to the original")
+        } catch {
+            log.error("Could not revert: \(error.localizedDescription, privacy: .public)")
+            status = L("Could not save")
         }
-        dirty = false
-        status = L("Back to the original")
     }
 
     func copyResult() {

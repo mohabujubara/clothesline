@@ -1,5 +1,6 @@
 using System.Windows;
 using Snapline.Core;
+using Snapline.UI;
 
 namespace Snapline;
 
@@ -11,9 +12,18 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        string? lastError = null;
+        var lastErrorAt = DateTime.MinValue;
         DispatcherUnhandledException += (_, ex) =>
         {
-            Log.Error($"Unhandled: {ex.Exception}");
+            // The same failure every tick would fill the log; one line a second is enough.
+            var text = ex.Exception.ToString();
+            if (text != lastError || (DateTime.Now - lastErrorAt).TotalSeconds > 1)
+            {
+                Log.Error($"Unhandled: {text}");
+                lastError = text;
+                lastErrorAt = DateTime.Now;
+            }
             ex.Handled = true;
         };
         AppDomain.CurrentDomain.UnhandledException += (_, ex) => Log.Error($"Fatal: {ex.ExceptionObject}");
@@ -24,7 +34,18 @@ public partial class App : Application
             Shutdown(ok ? 0 : 1);
             return;
         }
-        _controller = new AppController();
+        try
+        {
+            _controller = new AppController();
+        }
+        catch (Exception ex)
+        {
+            // Without a tray icon there would be nothing to quit: say what happened and leave.
+            Log.Error($"Could not start: {ex}");
+            MessageBox.Show($"{Strings.AppName} could not start.\n\n{ex.Message}\n\n{Log.Location}", Strings.AppName, MessageBoxButton.OK, MessageBoxImage.Error);
+            Shutdown(1);
+            return;
+        }
 
         // A second launch asks the running one to show the line.
         if (ToggleSignal is not null)

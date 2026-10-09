@@ -18,8 +18,13 @@ enum SettingsWindow {
         w.contentViewController = NSHostingController(rootView: SettingsView())
         w.center()
         window = w
-        NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: w, queue: .main) { _ in
-            MainActor.assumeIsolated { window = nil }
+        var token: NSObjectProtocol?
+        token = NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: w, queue: .main) { _ in
+            MainActor.assumeIsolated {
+                window = nil
+                if let token { NotificationCenter.default.removeObserver(token) }
+                token = nil
+            }
         }
         w.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)

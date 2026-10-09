@@ -29,6 +29,24 @@ public static class Inbox
         return Path.GetFullPath(path).StartsWith(folder, StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>
+    /// Whether a folder may hold caught captures. Discarding a caught capture
+    /// sends it to the Recycle Bin, so the folder must never be, contain or sit
+    /// inside a place where the user's own screenshots live.
+    /// </summary>
+    public static bool IsSafeFolder(string candidate, IEnumerable<string> protectedFolders)
+    {
+        string Norm(string p) => Path.GetFullPath(p).TrimEnd('\\') + "\\";
+        var c = Norm(candidate);
+        foreach (var p in protectedFolders)
+        {
+            string n;
+            try { n = Norm(p); } catch { continue; }
+            if (c.StartsWith(n, StringComparison.OrdinalIgnoreCase) || n.StartsWith(c, StringComparison.OrdinalIgnoreCase)) return false;
+        }
+        return true;
+    }
+
     /// <summary>A fresh file name for a capture, like the Snipping Tool's.</summary>
     public static string NewCapturePath()
     {

@@ -17,28 +17,38 @@ public sealed class Settings
         {
             var old = Path.Combine(Path.GetDirectoryName(folder)!, "Clothesline");
             var marker = Path.Combine(folder, ".migrated");
-            if (!Directory.Exists(old) || File.Exists(marker)) return folder;
+            var oldJson = Path.Combine(old, "settings.json");
+            // Only a folder that is recognisably ours is touched: it must hold our settings file.
+            if (!Directory.Exists(old) || File.Exists(marker) || !File.Exists(oldJson)) return folder;
             Directory.CreateDirectory(folder);
             // The old settings win, with their paths rewritten to the new folder.
-            var oldJson = Path.Combine(old, "settings.json");
-            if (File.Exists(oldJson))
-                File.WriteAllText(Path.Combine(folder, "settings.json"), File.ReadAllText(oldJson).Replace("\\\\Clothesline\\\\", "\\\\Snapline\\\\"));
-            // Caught captures, originals and the rest come along, file by file.
-            foreach (var dir in Directory.GetDirectories(old))
-            {
-                var target = Path.Combine(folder, Path.GetFileName(dir));
-                Directory.CreateDirectory(target);
-                foreach (var file in Directory.GetFiles(dir))
-                {
-                    var dest = Path.Combine(target, Path.GetFileName(file));
-                    if (!File.Exists(dest)) File.Move(file, dest);
-                }
-            }
+            File.WriteAllText(Path.Combine(folder, "settings.json"), File.ReadAllText(oldJson).Replace("\\\\Clothesline\\\\", "\\\\Snapline\\\\"));
+            File.Delete(oldJson);
+            // Caught captures, originals and the rest come along, file by file,
+            // subfolders included. Nothing is ever deleted: what cannot be moved stays.
+            MoveTree(old, folder);
             File.WriteAllText(marker, DateTime.Now.ToString("o"));
-            try { Directory.Delete(old, recursive: true); } catch { }
+            try { Directory.Delete(old, recursive: false); } catch { }
         }
         catch { }
         return folder;
+    }
+
+    /// <summary>Moves every file under one folder to the same place under another, leaving existing files alone, and removes folders that end up empty.</summary>
+    private static void MoveTree(string from, string to)
+    {
+        foreach (var dir in Directory.GetDirectories(from))
+        {
+            var target = Path.Combine(to, Path.GetFileName(dir));
+            Directory.CreateDirectory(target);
+            MoveTree(dir, target);
+            try { Directory.Delete(dir, recursive: false); } catch { }
+        }
+        foreach (var file in Directory.GetFiles(from))
+        {
+            var dest = Path.Combine(to, Path.GetFileName(file));
+            if (!File.Exists(dest)) { try { File.Move(file, dest); } catch { } }
+        }
     }
 
     private static readonly string FilePath = Path.Combine(Folder, "settings.json");
@@ -98,7 +108,13 @@ public sealed class Settings
         try
         {
             if (File.Exists(FilePath))
-                return JsonSerializer.Deserialize<Settings>(File.ReadAllText(FilePath), Options) ?? new Settings();
+            {
+                var loaded = JsonSerializer.Deserialize<Settings>(File.ReadAllText(FilePath), Options) ?? new Settings();
+                // Paths are matched regardless of case; the deserializer forgets that.
+                loaded.Spots = new Dictionary<string, double>(loaded.Spots, StringComparer.OrdinalIgnoreCase);
+                loaded.Notes = new Dictionary<string, NoteData>(loaded.Notes, StringComparer.OrdinalIgnoreCase);
+                return loaded;
+            }
         }
         catch (Exception e)
         {
@@ -132,6 +148,7 @@ public static class Log
 {
     private static readonly object Gate = new();
     private static readonly string FilePath = Path.Combine(Settings.Folder, "log.txt");
+    public static string Location => FilePath;
 
     public static void Notice(string message) => Write("notice", message);
     public static void Error(string message) => Write("error", message);

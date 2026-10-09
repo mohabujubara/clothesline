@@ -1,5 +1,5 @@
 # Builds Snapline into dist\.
-#   scripts\build.ps1            framework-dependent single file (needs the .NET 8 Desktop Runtime), ~1 MB
+#   scripts\build.ps1            framework-dependent single file (needs the .NET 8 Desktop Runtime), ~25 MB
 #   scripts\build.ps1 -Portable  self-contained single file, runs anywhere, ~70 MB
 param([switch]$Portable, [switch]$Installer, [string]$Version)
 $ErrorActionPreference = 'Stop'
@@ -16,6 +16,8 @@ $outDir = if ($Portable) { Join-Path $dist 'portable' } else { Join-Path $dist '
 $args = @('publish', $proj, '-c', 'Release', '-r', 'win-x64', '-o', $outDir,
           '-p:PublishSingleFile=true', '-p:IncludeNativeLibrariesForSelfExtract=true', '-p:DebugType=none')
 $args += if ($Portable) { '--self-contained', 'true', '-p:EnableCompressionInSingleFile=true' } else { '--self-contained', 'false' }
+# The version from the release tag goes into the exe's own properties too.
+if ($Version -and $Version -ne '0.0.0') { $args += "-p:Version=$Version" }
 dotnet @args
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 Write-Host "`nBuilt $(Join-Path $outDir 'Snapline.exe')"

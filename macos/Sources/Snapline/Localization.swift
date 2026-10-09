@@ -27,8 +27,6 @@ enum Localization {
         if chosen == "en" || chosen == "ar" { return chosen }
         for preferred in Locale.preferredLanguages {
             if preferred.hasPrefix("ar") { return "ar" }
-            if preferred.hasPrefix("es") { return "es" }
-            if preferred.hasPrefix("zh-Hans") || preferred.hasPrefix("zh-CN") { return "zh-Hans" }
             if preferred.hasPrefix("en") { return "en" }
         }
         return "en"

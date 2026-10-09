@@ -54,6 +54,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         panel.placeOnScreen()
         updateCapacity()
 
+        // A snapshot left by a run that never quit cleanly goes back first.
+        Inbox.recoverIfNeeded()
+        Originals.sweep(hanging: line.items.map(\.url))
         if Inbox.isEnabled { Inbox.apply() }
         restoreSettingsOnTermination()
         startWatcher()
@@ -506,7 +509,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let flipped = CGPoint(x: local.x, y: panel.frame.height - local.y)
         let overSomething = line.hitRects.values.contains { $0.insetBy(dx: -4, dy: -4).contains(flipped) }
             || line.extraHitRects.contains { $0.contains(flipped) }
-            || Layout.isNearRope(flipped, width: panel.frame.width)
         if panel.ignoresMouseEvents == overSomething {
             panel.ignoresMouseEvents = !overSomething
         }

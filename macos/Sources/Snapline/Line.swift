@@ -21,6 +21,14 @@ struct Pegged: Identifiable, Equatable {
     /// Where it hangs along the line, as a fraction of the width, when photos are not arranged automatically.
     var spot: Double?
     let hungAt = Date()
+    /// The picture's size in pixels, read once for the tooltip.
+    let pixels: CGSize?
+
+    init(url: URL, thumb: NSImage) {
+        self.url = url
+        self.thumb = thumb
+        pixels = pixelSize(url)
+    }
 
     var isNote: Bool { Notes.isNote(url) }
     /// A stable number for this photo, so a mixed peg keeps its colour.
@@ -55,6 +63,8 @@ final class Line: ObservableObject {
     var extraHitRects: [CGRect] = []
 
     var maxItems = 8
+    /// The width of the line on screen, from the view, for placing new photos.
+    var layoutWidth: CGFloat = 0
     let persist: Bool
 
     var soundOn: Bool {
@@ -83,6 +93,9 @@ final class Line: ObservableObject {
               let thumb = makeThumbnail(url) else { return nil }
         var item = Pegged(url: url, thumb: thumb)
         item.flying = flying
+        if !Settings.current.autoArrange {
+            item.spot = Layout.freeSpot(taken: items.filter { !$0.falling }.compactMap(\.spot), width: layoutWidth)
+        }
         items.append(item)
         // A full line lets the oldest photo fall off the far end. Kept photos stay.
         while liveCount > maxItems, let oldest = items.first(where: { !$0.falling && !$0.pinned }) {
@@ -107,6 +120,7 @@ final class Line: ObservableObject {
         onFall?(items[i])
         items[i].falling = true
         hitRects[id] = nil
+        Originals.forget(items[i].url)
         save()
         if !quietly { play("Pop", volume: 0.25) }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
@@ -344,13 +358,17 @@ final class Line: ObservableObject {
     }
 
     private func restore() {
+        // Everything that hung last time comes back; the line's real capacity applies from the next capture on.
+        let capacity = maxItems
+        maxItems = .max
         for path in Settings.current.pegged where FileManager.default.fileExists(atPath: path) {
             if let id = hang(URL(fileURLWithPath: path), quietly: true), let i = index(of: id) {
                 items[i].used = true
                 items[i].pinned = Settings.current.pinnedPaths.contains(path)
-                items[i].spot = Settings.current.spots[path]
+                items[i].spot = Settings.current.spots[path] ?? items[i].spot
             }
         }
+        maxItems = capacity
     }
 
     // MARK: Helpers

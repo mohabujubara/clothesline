@@ -16,11 +16,11 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
-    <Version>1.5.0</Version>
+    <Version>1.6.1</Version>
     <Product>Snapline</Product>
     <Authors>Snapline</Authors>
     <Description>Screenshots, hung out to dry. A clothesline for your screenshots along the top of the screen.</Description>
-    <Copyright>MIT</Copyright>
+    <Copyright>MIT License</Copyright>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CA1416;WFAC010</NoWarn>

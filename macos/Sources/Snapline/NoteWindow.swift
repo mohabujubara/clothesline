@@ -19,10 +19,13 @@ enum NoteWindow {
         window.contentViewController = NSHostingController(rootView: NoteView(model: model))
         window.center()
         open[url] = window
-        NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: window, queue: .main) { _ in
+        var token: NSObjectProtocol?
+        token = NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: window, queue: .main) { _ in
             MainActor.assumeIsolated {
                 model.flush()
                 open[url] = nil
+                if let token { NotificationCenter.default.removeObserver(token) }
+                token = nil
             }
         }
         window.makeKeyAndOrderFront(nil)

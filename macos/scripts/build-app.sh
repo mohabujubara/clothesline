@@ -6,7 +6,7 @@ cd "$(dirname "$0")/.."
 
 CONFIG="${1:-release}"
 APP="build/Snapline.app"
-VERSION="${VERSION:-1.5.0}"
+VERSION="${VERSION:-1.6.1}"
 
 # Builds one architecture and prints the binary's path.
 # The Command Line Tools for macOS 27 ship an SDK whose SwiftUI needs a macro
@@ -52,6 +52,10 @@ rm -rf "$WORK"
 sips -z 128 128 "../design/mark-1024.png" --out "$APP/Contents/Resources/Mark.png" >/dev/null
 sips -z 36 36 "../design/mark-small-64.png" --out "$APP/Contents/Resources/MenuBar.png" >/dev/null
 
+# The licences travel with the app.
+cp ../LICENSE "$APP/Contents/Resources/LICENSE.txt"
+cp ../design/fonts/OFL.txt "$APP/Contents/Resources/Manrope-OFL.txt"
+
 # Translations: one folder per language, listed in Info.plist so macOS knows
 # which languages the app speaks.
 LANGUAGES=""
@@ -72,7 +76,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleIconFile</key><string>Snapline</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>${VERSION}</string>
-  <key>CFBundleVersion</key><string>1</string>
+  <key>CFBundleVersion</key><string>${VERSION}</string>
   <key>CFBundleDevelopmentRegion</key><string>en</string>
   <key>CFBundleLocalizations</key><array>${LANGUAGES}</array>
   <key>LSMinimumSystemVersion</key><string>14.0</string>

@@ -10,7 +10,7 @@ struct Settings: Codable {
     /// Sticky notes, by the path of the picture each is drawn into.
     var notes: [String: NoteData] = [:]
     var soundOn = true
-    var catchClipboard = true
+    var catchClipboard = false
     var stayDownWhileUnused = false
     var takeDownAfterDrag = false
     var autoArrange = false

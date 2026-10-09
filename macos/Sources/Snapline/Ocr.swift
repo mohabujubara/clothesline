@@ -11,7 +11,17 @@ enum Ocr {
                 request.recognitionLevel = .accurate
                 request.usesLanguageCorrection = true
                 if #available(macOS 13.0, *) { request.automaticallyDetectsLanguage = true }
-                request.recognitionLanguages = ["ar", "en-US"]
+                // Arabic and English first, then whatever the user's Mac speaks;
+                // only languages this version of Vision knows, or the request fails outright.
+                let supported = (try? request.supportedRecognitionLanguages()) ?? []
+                var wanted = ["ar", "en-US"] + Locale.preferredLanguages
+                wanted = wanted.filter { lang in supported.contains { $0 == lang || $0.hasPrefix(lang.prefix(2)) } }
+                var chosen: [String] = []
+                for lang in wanted {
+                    let match = supported.first { $0 == lang } ?? supported.first { $0.hasPrefix(lang.prefix(2)) }
+                    if let match, !chosen.contains(match) { chosen.append(match) }
+                }
+                if !chosen.isEmpty { request.recognitionLanguages = chosen }
                 let handler = VNImageRequestHandler(url: url, options: [:])
                 do {
                     try handler.perform([request])

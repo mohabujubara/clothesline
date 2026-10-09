@@ -131,6 +131,7 @@ public sealed class Line
         if (item is null || item.Falling) return;
         Fall?.Invoke(item);
         item.Falling = true;
+        Originals.Forget(item.Path);
         Save();
         ItemsChanged?.Invoke();
         if (!quietly) Sounds.PlayPop();

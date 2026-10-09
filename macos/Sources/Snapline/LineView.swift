@@ -18,18 +18,26 @@ enum Layout {
         return ropeTop + 4 * sag(width: width) * f * (1 - f)
     }
 
-    /// Whether a point (top-left origin) is close enough to the rope to grab it.
-    static func isNearRope(_ p: CGPoint, width: CGFloat) -> Bool {
-        abs(p.y - ropeY(x: p.x, width: width)) <= 7
-    }
-
     static func x(index: Int, count: Int, width: CGFloat) -> CGFloat {
         let total = CGFloat(max(count - 1, 0)) * spacing
         return width / 2 - total / 2 + CGFloat(index) * spacing
     }
 
-    /// Where each live photo hangs: spread evenly, or where you put it. A new
-    /// photo takes the nearest free place to the middle.
+    /// The nearest free place to the middle, as a fraction of the width, for a new photo.
+    static func freeSpot(taken: [Double], width: CGFloat) -> Double {
+        guard width > 0 else { return 0.5 }
+        let half = cardWidth / 2
+        let takenX = taken.map { CGFloat($0) * width }
+        for step in 0..<40 {
+            for candidate in [width / 2 + CGFloat(step) * spacing, width / 2 - CGFloat(step) * spacing] {
+                if candidate < half || candidate > width - half { continue }
+                if takenX.allSatisfy({ abs($0 - candidate) >= spacing * 0.9 }) { return Double(candidate / width) }
+            }
+        }
+        return 0.5
+    }
+
+    /// Where each live photo hangs: spread evenly, or where you put it.
     @MainActor
     static func positions(for line: Line, width: CGFloat) -> [UUID: CGFloat] {
         let live = line.items.filter { !$0.falling }
@@ -39,22 +47,8 @@ enum Layout {
             return result
         }
         let half = cardWidth / 2
-        var taken: [CGFloat] = live.compactMap { $0.spot.map { CGFloat($0) * width } }
         for item in live {
-            var cx: CGFloat
-            if let spot = item.spot {
-                cx = CGFloat(spot) * width
-            } else {
-                cx = width / 2
-                search: for step in 0..<40 {
-                    for candidate in [width / 2 + CGFloat(step) * spacing, width / 2 - CGFloat(step) * spacing] {
-                        if candidate < half || candidate > width - half { continue }
-                        if taken.allSatisfy({ abs($0 - candidate) >= spacing * 0.9 }) { cx = candidate; break search }
-                    }
-                }
-                taken.append(cx)
-                line.setSpot(item.id, Double(cx / width), save: true)
-            }
+            let cx = CGFloat(item.spot ?? 0.5) * width
             result[item.id] = min(max(cx, half), max(half, width - half))
         }
         return result
@@ -73,8 +67,10 @@ struct LineView: View {
             ZStack(alignment: .topLeading) {
                 Rope(width: width)
                     .id(line.look)
-                RopeClick(width: width)
-                    .frame(width: width, height: Layout.panelHeight)
+                // The line needs its width to find a free place for a new photo.
+                Color.clear.frame(width: 1, height: 1)
+                    .onAppear { line.layoutWidth = width }
+                    .onChange(of: width) { _, w in line.layoutWidth = w }
 
                 if Settings.current.bows && width > 400 {
                     let color = Pegs.rope()
@@ -159,30 +155,6 @@ extension Notification.Name {
     static let snaplineMenuRequested = Notification.Name("snaplineMenuRequested")
 }
 
-/// The rope itself takes a right-click for the menu, and nothing else.
-struct RopeClick: NSViewRepresentable {
-    let width: CGFloat
-
-    func makeNSView(context: Context) -> RopeClickView { RopeClickView() }
-    func updateNSView(_ view: RopeClickView, context: Context) { view.width = width }
-}
-
-final class RopeClickView: NSView {
-    var width: CGFloat = 0
-
-    override var isFlipped: Bool { true }
-
-    override func hitTest(_ point: NSPoint) -> NSView? {
-        let local = convert(point, from: superview)
-        return Layout.isNearRope(local, width: width) ? self : nil
-    }
-
-    override func rightMouseDown(with event: NSEvent) {
-        NotificationCenter.default.post(name: .snaplineMenuRequested, object: nil)
-    }
-
-    override func mouseDown(with event: NSEvent) {}
-}
 
 /// A thin cord in the colour you chose, with a faint highlight and a soft
 /// shadow, fading at both ends so it seems to come from beyond the screen.

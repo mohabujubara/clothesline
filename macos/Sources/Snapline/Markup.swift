@@ -21,6 +21,8 @@ final class Markup: NSObject, NSSharingServiceDelegate {
             NSWorkspace.shared.open(url)
             return
         }
+        // The extension writes over the file; keep the untouched copy first, as the built-in editor does.
+        try? Originals.keep(url)
         editing = url
         service.delegate = self
         NSApp.activate(ignoringOtherApps: true)

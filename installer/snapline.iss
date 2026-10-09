@@ -50,6 +50,8 @@ Name: "startup"; Description: "Start Snapline when I sign in"; GroupDescription:
 
 [Files]
 Source: "{#Source}\Snapline.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\LICENSE"; DestDir: "{app}"; DestName: "LICENSE.txt"; Flags: ignoreversion
+Source: "..\src\Snapline\Assets\Fonts\OFL.txt"; DestDir: "{app}"; DestName: "Manrope-OFL.txt"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\Snapline"; Filename: "{app}\Snapline.exe"
@@ -73,4 +75,12 @@ var
 begin
   Exec(ExpandConstant('{sys}\taskkill.exe'), '/IM Snapline.exe /F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Result := '';
+end;
+
+// The app's own Settings can turn "Start with Windows" on after installation.
+// Uninstalling removes that entry whether Setup or the app wrote it.
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+begin
+  if CurUninstallStep = usPostUninstall then
+    RegDeleteValue(HKEY_CURRENT_USER, 'Software\Microsoft\Windows\CurrentVersion\Run', 'Snapline');
 end;
